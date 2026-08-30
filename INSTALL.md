@@ -1,19 +1,28 @@
 # Установка AutoSpot на телефон
 
-Тестовая сборка **v1.4.0** для Android.
+Тестовая сборка **v1.4.0** для Android и iOS.
 
 ## Скачать
 
-[AutoSpot-1.4.0-android-arm64.apk](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-android-arm64.apk) — почти все телефоны 2017+.
+- Android: [AutoSpot-1.4.0-android-arm64.apk](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-android-arm64.apk) — почти все телефоны 2017+.
+- iPhone / iPad: [AutoSpot-1.4.0-ios.ipa](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-ios.ipa) — iOS 15+.
 
-Старую версию удали перед установкой, если уже стояла 1.3.x.
+Старую Android-версию удали перед установкой, если уже стояла 1.3.x.
 
-## Как поставить
+## Как поставить на Android
 
 1. Скачай APK в Chrome на телефоне.
 2. Открой файл → разреши установку из этого источника.
 3. Если Play Защита ругается — «Подробнее» → «Всё равно установить».
 4. На споте разреши камеру и геолокацию.
+
+## Как поставить на iPhone
+
+1. Скачай IPA на компьютер.
+2. Поставь через [AltStore](https://altstore.io) или Sideloadly своим Apple ID.
+3. На телефоне: Настройки → Основные → VPN и управление устройством → доверь сертификату.
+4. Раз в 7 дней (бесплатный Apple ID) приложение нужно переподписать. С платным Developer — до года.
+5. В App Store это не попадёт само: нужна подпись из [инструкции App Store](docs/APP_STORE.md).
 
 ## Что нового
 

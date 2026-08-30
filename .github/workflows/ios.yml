@@ -1,0 +1,60 @@
+name: iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ios.yml"
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: autospot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.2"
+          cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+        working-directory: .
+
+      - name: Resolve packages
+        run: flutter pub get
+
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: bash tool/package_ios.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoSpot-1.4.0-ios
+          path: autospot/releases/AutoSpot-1.4.0-ios.ipa
+
+      - name: Commit IPA to main
+        working-directory: .
+        run: |
+          git config user.name "autospot-ci"
+          git config user.email "ci@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add autospot/releases/AutoSpot-1.4.0-ios.ipa
+          if git diff --staged --quiet; then
+            echo "IPA unchanged"
+            exit 0
+          fi
+          git commit -m "Add AutoSpot 1.4.0 iOS IPA."
+          git push origin main

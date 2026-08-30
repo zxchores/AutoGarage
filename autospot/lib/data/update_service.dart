@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 const latestManifestUrl =
@@ -32,11 +34,13 @@ class UpdateService {
       final build = int.tryParse('${m['build'] ?? ''}');
       final version = '${m['version'] ?? ''}';
       final apk = '${m['apk'] ?? ''}';
-      if (build == null || version.isEmpty || apk.isEmpty) return null;
+      final ipa = '${m['ipa'] ?? ''}';
+      final url = (!kIsWeb && Platform.isIOS && ipa.isNotEmpty) ? ipa : apk;
+      if (build == null || version.isEmpty || url.isEmpty) return null;
       final u = AppUpdate(
         version: version,
         build: build,
-        apkUrl: apk,
+        apkUrl: url,
         notes: '${m['notes'] ?? ''}',
       );
       return u.isNewerThan(currentBuild) ? u : null;

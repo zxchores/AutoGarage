@@ -28,6 +28,8 @@ flutter run
 
 На устройстве разрешите камеру и геолокацию. Город можно ввести руками.
 
+iOS: `flutter build ios --release --no-codesign`, затем `bash tool/package_ios.sh`. Готовая IPA лежит в `releases/`. App Store — только с подписью, см. `docs/APP_STORE.md`.
+
 ### Живой ИИ вместо демо
 
 1. Ключ [Google AI Studio](https://aistudio.google.com/) (Gemini) или OpenAI (`sk-...`).
