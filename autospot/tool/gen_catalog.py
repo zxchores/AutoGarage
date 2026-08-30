@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets" / "cars"
 DART = ROOT / "lib" / "domain" / "catalog_cars.dart"
-MODELS = Path(__file__).with_name("street_models.tsv")
+MODELS_DIR = Path(__file__).resolve().parent
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 BODY_RU = {
@@ -104,15 +104,20 @@ def card(path: Path, make: str, model: str, rarity: str) -> None:
 
 def load_models() -> list[tuple]:
     rows = []
-    for raw in MODELS.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split("|")
-        if len(parts) != 9:
-            raise ValueError(f"bad row: {line}")
-        cid, make, model, gen, year, country, body, rarity, hp = parts
-        rows.append((cid, make, model, gen, int(year), country, body, rarity, int(hp)))
+    seen = set()
+    for path in sorted(MODELS_DIR.glob("*.tsv")):
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("|")
+            if len(parts) != 9:
+                raise ValueError(f"bad row in {path.name}: {line}")
+            cid, make, model, gen, year, country, body, rarity, hp = parts
+            if cid in seen:
+                continue
+            seen.add(cid)
+            rows.append((cid, make, model, gen, int(year), country, body, rarity, int(hp)))
     return rows
 
 
@@ -164,7 +169,7 @@ def main() -> None:
     for row in added:
         png = ASSETS / f"{row[0]}.png"
         if not png.exists():
-            card(png, row[1], row[2], row[3] and row[7])
+            card(png, row[1], row[2], row[7])
     print(f"added {len(added)} cars, catalog now {len(have)}")
 
 

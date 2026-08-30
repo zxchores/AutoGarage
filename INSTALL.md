@@ -1,10 +1,10 @@
 # Установка AutoSpot на телефон
 
-Тестовая сборка **v1.4.0** для Android и iOS.
+Тестовая сборка **v1.4.1** для Android, iOS — 1.4.0.
 
 ## Скачать
 
-- Android: [AutoSpot-1.4.0-android-arm64.apk](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-android-arm64.apk) — почти все телефоны 2017+.
+- Android: [AutoSpot-1.4.1-android-arm64.apk](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.1-android-arm64.apk) — почти все телефоны 2017+.
 - iPhone / iPad: [AutoSpot-1.4.0-ios.ipa](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-ios.ipa) — iOS 15+.
 
 Старую Android-версию удали перед установкой, если уже стояла 1.3.x.
@@ -23,6 +23,10 @@
 3. На телефоне: Настройки → Основные → VPN и управление устройством → доверь сертификату.
 4. Раз в 7 дней (бесплатный Apple ID) приложение нужно переподписать. С платным Developer — до года.
 5. В App Store это не попадёт само: нужна подпись из [инструкции App Store](docs/APP_STORE.md).
+
+## Что нового в 1.4.1
+
+- В базе 1316 серийных машин мира: Европа, Япония, Корея, Китай, США, Индия, ASEAN и остальные актуальные марки
 
 ## Что нового
 

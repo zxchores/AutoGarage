@@ -119,6 +119,17 @@ void main() {
       'kia',
       'genesis',
       'lada',
+      'byd',
+      'nio',
+      'xpeng',
+      'xiaomi',
+      'rivian',
+      'lucid',
+      'suzuki',
+      'mg',
+      'dacia',
+      'seat',
+      'polestar',
     ]) {
       expect(
         makes.any((m) => m.contains(brand)),
@@ -126,7 +137,7 @@ void main() {
         reason: 'missing $brand',
       );
     }
-    expect(carCatalog.length, greaterThan(400));
+    expect(carCatalog.length, greaterThan(1200));
     expect(carCatalog.map((c) => c.id).toSet().length, carCatalog.length);
   });
 

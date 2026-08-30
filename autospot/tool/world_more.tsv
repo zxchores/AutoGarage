@@ -1,0 +1,226 @@
+# id|make|model|gen|year|country|body|rarity|hp
+# Remaining current Toyota
+toyota_crown_crossover|Toyota|Crown Crossover|S235|2022|JP|suv|epic|234
+toyota_century_suv|Toyota|Century SUV|GRG75|2023|JP|suv|legendary|412
+toyota_grsupra|Toyota|GR Supra|A90|2019|JP|coupe|epic|387
+toyota_aqua|Toyota|Aqua|XP210|2021|JP|hatch|common|116
+toyota_raum|Toyota|Raize Cross|A200|2021|JP|suv|common|98
+toyota_noah|Toyota|Noah|R90|2022|JP|mpv|rare|136
+toyota_voxy|Toyota|Voxy|R90|2022|JP|mpv|rare|136
+toyota_sienta|Toyota|Sienta|XP210|2022|JP|mpv|common|116
+toyota_roomy|Toyota|Roomy|M900|2020|JP|mpv|common|64
+toyota_pixis|Toyota|Pixis Epoch|LA350|2017|JP|hatch|common|52
+toyota_proaceverso|Toyota|Proace Verso|K0|2016|JP|mpv|rare|150
+toyota_tacoma_4th|Toyota|Tacoma|4th|2023|JP|pickup|epic|326
+toyota_4runner_6|Toyota|4Runner|6th|2024|JP|offroad|epic|278
+toyota_landcruiser_prado_j150|Toyota|Land Cruiser Prado|J150|2009|JP|offroad|epic|163
+toyota_fortuner_legender|Toyota|Fortuner Legender|AN160|2020|JP|offroad|rare|204
+toyota_innova_crysta|Toyota|Innova Crysta|AN140|2016|JP|mpv|common|150
+toyota_glanza|Toyota|Glanza|K12N|2019|JP|hatch|common|90
+toyota_urban_cruiser_hyryder|Toyota|Urban Cruiser Hyryder|TNGA|2022|JP|suv|common|103
+toyota_camry_hybrid|Toyota|Camry Hybrid|XV80|2024|JP|sedan|rare|232
+toyota_rav4_phev|Toyota|RAV4 PHEV|XA50|2020|JP|suv|rare|306
+toyota_highlander_hybrid|Toyota|Highlander Hybrid|XU70|2019|JP|suv|rare|243
+# Honda current
+honda_civic_hybrid|Honda|Civic Hybrid|FE|2022|JP|sedan|rare|200
+honda_accord_hybrid|Honda|Accord Hybrid|CY|2023|JP|sedan|rare|204
+honda_crv_hybrid|Honda|CR-V Hybrid|RS|2023|JP|suv|rare|204
+honda_hrv_hybrid|Honda|HR-V Hybrid|RV|2021|JP|suv|common|131
+honda_pilot_trailsport|Honda|Pilot Trailsport|YD|2022|JP|suv|rare|285
+honda_passport_trailsport|Honda|Passport Trailsport|YF|2025|JP|suv|rare|285
+honda_odyssey_jp|Honda|Odyssey Absolute|RC|2018|JP|mpv|rare|174
+honda_stepwgn_air|Honda|Step WGN Air|RP|2022|JP|mpv|rare|150
+honda_nvan|Honda|N-Van|JJ1|2018|JP|van|common|58
+honda_n_one|Honda|N-One|JG3|2020|JP|hatch|common|64
+honda_n_wgn|Honda|N-WGN|JH3|2019|JP|hatch|common|64
+honda_vezel_ehev|Honda|Vezel e:HEV|RV|2021|JP|suv|common|131
+honda_wrv_in|Honda|WR-V RS|DG4|2023|JP|suv|common|121
+# Nissan current
+nissan_xtrail_e_power|Nissan|X-Trail e-POWER|T33|2022|JP|suv|rare|204
+nissan_qashqai_e_power|Nissan|Qashqai e-POWER|J12|2022|JP|suv|rare|190
+nissan_note_e_power|Nissan|Note e-POWER|E13|2020|JP|hatch|common|136
+nissan_sakura_ev|Nissan|Sakura|KE0|2022|JP|hatch|common|64
+nissan_ariya_nis|Nissan|Ariya Nismo|FE0|2024|JP|suv|epic|429
+nissan_z_nismo|Nissan|Z Nismo|RZ34|2023|JP|coupe|epic|420
+nissan_patrol_y62|Nissan|Patrol|Y62|2010|JP|offroad|epic|400
+nissan_terra|Nissan|Terra|D23|2018|JP|offroad|rare|190
+nissan_kicks_e_power|Nissan|Kicks e-POWER|P15|2020|JP|suv|common|129
+nissan_sunny|Nissan|Sunny|N18|2019|JP|sedan|common|118
+nissan_almera_n18|Nissan|Almera|N18|2019|JP|sedan|common|118
+# Mazda / Subaru / Mitsubishi extras
+mazda_3hatch|Mazda|3 Hatch|BP|2019|JP|hatch|common|186
+mazda_6_gj|Mazda|6|GJ|2012|JP|sedan|common|192
+mazda_cx5_kf|Mazda|CX-5|KF|2017|JP|suv|rare|194
+mazda_mx5_nd|Mazda|MX-5|ND|2015|JP|convertible|rare|184
+subaru_impreza6|Subaru|Impreza|6th|2023|JP|hatch|common|152
+subaru_crosstrek2|Subaru|Crosstrek|GU|2023|JP|suv|rare|182
+subaru_outback7|Subaru|Outback|BT|2020|JP|wagon|rare|182
+mitsubishi_outlander_phev|Mitsubishi|Outlander PHEV|GN0W|2021|JP|suv|rare|224
+mitsubishi_pajerosport_3|Mitsubishi|Pajero Sport|3rd|2015|JP|offroad|rare|181
+# Hyundai / Kia extras
+hyundai_staria_lounge|Hyundai|Staria Lounge|US4|2021|KR|mpv|rare|177
+hyundai_palisade_2|Hyundai|Palisade|LX3|2025|KR|suv|epic|329
+hyundai_santafe_mx5|Hyundai|Santa Fe|MX5|2023|KR|suv|rare|277
+hyundai_tucson_nline|Hyundai|Tucson N Line|NX4|2021|KR|suv|rare|180
+hyundai_kona_2|Hyundai|Kona|SX2|2023|KR|suv|common|198
+hyundai_i20|Hyundai|i20|BC3|2020|KR|hatch|common|100
+hyundai_i10|Hyundai|i10|AC3|2019|KR|hatch|common|67
+hyundai_bayon_eu|Hyundai|Bayon|BC3|2021|KR|suv|common|100
+hyundai_creta_nline|Hyundai|Creta N Line|SU2|2024|KR|suv|common|160
+kia_sportage_nq5|Kia|Sportage|NQ5|2021|KR|suv|rare|180
+kia_sorento_mq4|Kia|Sorento|MQ4|2020|KR|suv|rare|281
+kia_carnival_ka4|Kia|Carnival|KA4|2020|KR|mpv|rare|294
+kia_seltos_2|Kia|Seltos|SP2|2023|KR|suv|common|146
+kia_soul_3|Kia|Soul|SK3|2019|KR|hatch|common|147
+kia_picanto_3|Kia|Picanto|JA|2017|KR|hatch|common|67
+kia_ceed_gt|Kia|Ceed GT|CD|2018|KR|hatch|rare|204
+kia_proceed|Kia|ProCeed|CD|2018|KR|wagon|rare|204
+kia_xceed|Kia|XCeed|CD|2019|KR|suv|common|140
+kia_niro_2|Kia|Niro|SG2|2022|KR|suv|rare|129
+kia_ev6_gt|Kia|EV6 GT|CV|2022|KR|suv|epic|585
+# VW Group extras
+vw_tiguan_allspace|Volkswagen|Tiguan Allspace|AD1|2017|DE|suv|rare|180
+vw_touran|Volkswagen|Touran|5T|2015|DE|mpv|common|150
+vw_sharan|Volkswagen|Sharan|7N|2010|DE|mpv|rare|170
+vw_id5|Volkswagen|ID.5|MEB|2021|DE|suv|rare|204
+vw_id4gtx|Volkswagen|ID.4 GTX|MEB|2021|DE|suv|epic|299
+vw_taigo|Volkswagen|Taigo|CS|2021|DE|suv|common|110
+vw_polo_gti_aw|Volkswagen|Polo GTI|AW|2017|DE|hatch|rare|207
+skoda_kamiq_monte|Skoda|Kamiq Monte Carlo|NW4|2019|CZ|suv|common|150
+skoda_karoq_sportline|Skoda|Karoq Sportline|NU|2017|CZ|suv|rare|190
+skoda_octavia_rs_iv|Skoda|Octavia RS|NX|2020|CZ|liftback|epic|245
+skoda_enyaq_coupe|Skoda|Enyaq Coupe|MEB|2022|CZ|suv|rare|204
+skoda_slavia|Skoda|Slavia|NW|2021|CZ|sedan|common|110
+skoda_kushaq_in|Skoda|Kushaq|NW|2021|CZ|suv|common|150
+# Mercedes extras
+mercedes_cle53|Mercedes-AMG|CLE 53|C236|2023|DE|coupe|epic|449
+mercedes_cle63|Mercedes-AMG|CLE 63|C236|2025|DE|coupe|legendary|585
+mercedes_gla35|Mercedes-AMG|GLA 35|H247|2020|DE|suv|epic|306
+mercedes_glb35|Mercedes-AMG|GLB 35|X247|2020|DE|suv|epic|306
+mercedes_glc43|Mercedes-AMG|GLC 43|X254|2022|DE|suv|epic|421
+mercedes_gle53|Mercedes-AMG|GLE 53|V167|2019|DE|suv|epic|435
+mercedes_g580|Mercedes-Benz|G 580 EQ|W465|2024|DE|offroad|legendary|579
+mercedes_sl63|Mercedes-AMG|SL 63|R232|2022|DE|convertible|legendary|585
+mercedes_eqa|Mercedes-Benz|EQA|H243|2021|DE|suv|rare|190
+mercedes_eqb_refresh|Mercedes-Benz|EQB|X243|2021|DE|suv|rare|225
+mercedes_vclass|Mercedes-Benz|V-Class|W447|2014|DE|mpv|epic|239
+mercedes_eqv|Mercedes-Benz|EQV|W447|2020|DE|mpv|epic|204
+# BMW extras
+bmw_m2cs|BMW|M2 CS|G87|2025|DE|coupe|legendary|523
+bmw_m3cs|BMW|M3 CS|G80|2023|DE|sedan|legendary|550
+bmw_m4csl|BMW|M4 CSL|G82|2022|DE|coupe|legendary|550
+bmw_m5_g90|BMW|M5|G90|2024|DE|sedan|legendary|727
+bmw_x5m60|BMW|X5 M60i|G05|2023|DE|suv|epic|523
+bmw_x7m60|BMW|X7 M60i|G07|2022|DE|suv|epic|523
+bmw_ix_m70|BMW|iX M70|I20|2023|DE|suv|legendary|619
+bmw_z4m40|BMW|Z4 M40i|G29|2018|DE|convertible|epic|340
+bmw_1series_f70|BMW|1 Series|F70|2024|DE|hatch|rare|156
+bmw_xm_label|BMW|XM Label Red|G09|2023|DE|suv|legendary|748
+# Audi extras
+audi_rs6_perf|Audi|RS6 Avant Performance|C8|2022|DE|wagon|legendary|630
+audi_rsq8|Audi|RS Q8|4M|2019|DE|suv|legendary|600
+audi_rsq3|Audi|RS Q3|F3|2019|DE|suv|epic|400
+audi_s3_8y|Audi|S3 Sportback|8Y|2020|DE|hatch|epic|333
+audi_tt_rs|Audi|TT RS|FV|2016|DE|coupe|epic|400
+audi_r8_v10|Audi|R8 V10|4S|2015|DE|coupe|legendary|620
+audi_q8_etron_s|Audi|SQ8 e-tron|GE|2022|DE|suv|epic|503
+# Porsche extras
+porsche_911_carrera_t|Porsche|911 Carrera T|992|2022|DE|coupe|legendary|385
+porsche_911_gt3rs|Porsche|911 GT3 RS|992|2022|DE|coupe|legendary|525
+porsche_718_gt4rs|Porsche|718 Cayman GT4 RS|982|2021|DE|coupe|legendary|500
+porsche_macan_gts_2|Porsche|Macan GTS|95B|2021|DE|suv|epic|434
+porsche_panamera_turbo|Porsche|Panamera Turbo E-Hybrid|971|2024|DE|liftback|legendary|680
+# Ford extras
+ford_explorer_st|Ford|Explorer ST|U625|2019|US|suv|epic|400
+ford_bronco_raptor|Ford|Bronco Raptor|U725|2022|US|offroad|epic|418
+ford_mustang_darkhorse|Ford|Mustang Dark Horse|S650|2023|US|coupe|epic|500
+ford_mustang_gt_s650|Ford|Mustang GT|S650|2023|US|coupe|epic|480
+ford_super_duty|Ford|F-250 Super Duty|P708|2022|US|pickup|epic|475
+ford_expedition_stealth|Ford|Expedition|U554|2021|US|suv|epic|440
+ford_kuga_phev|Ford|Kuga PHEV|C520|2019|DE|suv|rare|225
+# Chevy / Cadillac extras
+chevrolet_corvette_eray|Chevrolet|Corvette E-Ray|C8|2023|US|coupe|legendary|655
+chevrolet_corvette_z06|Chevrolet|Corvette Z06|C8|2022|US|coupe|legendary|670
+chevrolet_camaro_zl1|Chevrolet|Camaro ZL1|6th|2016|US|coupe|epic|650
+chevrolet_tahoe_z71|Chevrolet|Tahoe Z71|T1XX|2020|US|suv|epic|420
+chevrolet_colorado_zr2|Chevrolet|Colorado ZR2|T1XX|2023|US|pickup|epic|310
+# Tesla extras
+tesla_model_y_juniper|Tesla|Model Y|Juniper|2025|US|suv|epic|295
+tesla_model_3_perf|Tesla|Model 3 Performance|Highland|2024|US|sedan|epic|510
+tesla_cybertruck_beast|Tesla|Cybertruck Cyberbeast|CT|2023|US|pickup|legendary|845
+# Volvo extras
+volvo_ex90|Volvo|EX90|SPA2|2024|SE|suv|epic|517
+volvo_ec40|Volvo|EC40|CMA|2022|SE|suv|epic|408
+volvo_es90|Volvo|ES90|SPA2|2025|SE|sedan|epic|680
+volvo_xc60_t8|Volvo|XC60 T8|SPA|2017|SE|suv|epic|455
+# Land Rover extras
+landrover_defender_octa|Land Rover|Defender Octa|L663|2024|GB|offroad|legendary|626
+landrover_sport_svr|Land Rover|Range Rover Sport SV|L461|2022|GB|suv|legendary|626
+range_rover_sv|Land Rover|Range Rover SV|L460|2021|GB|suv|legendary|606
+# Jeep extras
+jeep_wrangler_392|Jeep|Wrangler Rubicon 392|JL|2021|US|offroad|epic|470
+jeep_grand_cherokee_4xe|Jeep|Grand Cherokee 4xe|WL|2022|US|suv|epic|375
+jeep_avenger_ev|Jeep|Avenger EV|J3|2023|US|suv|rare|156
+# Peugeot / Citroen / Renault extras
+peugeot_308sw|Peugeot|308 SW|P51|2021|FR|wagon|common|130
+peugeot_408_gt|Peugeot|408 GT|P54|2022|FR|liftback|rare|180
+peugeot_2008_2|Peugeot|2008|P24|2019|FR|suv|common|130
+citroen_c5aircross_phev|Citroen|C5 Aircross PHEV|C84|2018|FR|suv|rare|225
+renault_austral_esprit|Renault|Austral Esprit Alpine|RHN|2022|FR|suv|rare|200
+renault_arkana_eu|Renault|Arkana|LJL|2019|FR|suv|common|140
+# China wave 2
+byd_han_l|BYD|Han L|EV|2025|CN|sedan|epic|580
+byd_tang_l|BYD|Tang L|EV|2025|CN|suv|epic|580
+byd_sealion_07_dmi|BYD|Sealion 07 DM-i|DM-i|2024|CN|suv|rare|270
+byd_dolphin_surf|BYD|Dolphin Surf|EA1|2025|CN|hatch|common|88
+geely_ex5_eu|Geely|EX5|GEA|2024|CN|suv|rare|218
+zeekr_001_fr|Zeekr|001 FR|SEA|2023|CN|wagon|legendary|1265
+nio_onvo_l90|Onvo|L90|NT3|2025|CN|suv|rare|300
+xpeng_p7plus|XPeng|P7+|SEPA2|2024|CN|sedan|epic|310
+xiaomi_su7_ultra|Xiaomi|SU7 Ultra|Modena|2024|CN|sedan|legendary|1548
+li_i6|Li Auto|i6|i6|2025|CN|sedan|epic|400
+aito_m9_max|AITO|M9 Max|SES|2024|CN|suv|legendary|496
+avatr_06|Avatr|06|CHN|2025|CN|sedan|epic|310
+leapmotor_b01|Leapmotor|B01|B01|2025|CN|sedan|rare|176
+hongqi_guoya|Hongqi|Guoya|CA7601|2023|CN|sedan|legendary|252
+wuling_xingguang_s|Wuling|Xingguang S|730|2024|CN|suv|common|136
+mg_zs_ev|MG|ZS EV|ZS11|2019|CN|suv|common|156
+mg_im6|MG|IM6|EH32|2025|CN|suv|rare|245
+chery_fulwin_a8|Chery|Fulwin A8|T1J|2024|CN|sedan|rare|156
+chery_qq_unibody|Chery|QQ Unibody|T1X|2024|CN|hatch|common|70
+gac_hyptec_ht|Hyptec|HT|AEP|2023|CN|suv|epic|340
+dongfeng_ep007|Dongfeng|eπ 007|EV|2024|CN|sedan|rare|218
+baic_arcfox_s5|Arcfox|S5|BE22|2024|CN|suv|epic|400
+# More still-common global
+honda_city_hatch|Honda|City Hatchback|GN|2020|JP|hatch|common|121
+toyota_yaris_gr|Toyota|GR Yaris|XP21|2020|JP|hatch|epic|272
+toyota_gr86_2|Toyota|GR86|ZN8|2021|JP|coupe|epic|234
+suzuki_swift_sport|Suzuki|Swift Sport|ZC33|2017|JP|hatch|rare|140
+suzuki_vitara_hybrid|Suzuki|Vitara Hybrid|LY|2015|JP|suv|common|129
+fiat_500e|Fiat|500e|332|2020|IT|hatch|rare|118
+fiat_panda_hybrid|Fiat|Panda Hybrid|319|2020|IT|hatch|common|70
+mini_cooper_jcw|Mini|John Cooper Works|F66|2024|GB|hatch|epic|231
+mini_countryman_jcw|Mini|Countryman JCW|U25|2023|GB|suv|epic|300
+mini_aceman|Mini|Aceman|J01|2024|GB|suv|rare|218
+opel_mokka_e|Opel|Mokka-e|P2XO|2020|DE|suv|common|136
+opel_corsa_e|Opel|Corsa-e|P2JO|2019|DE|hatch|common|136
+opel_grandland_2|Opel|Grandland|STLA|2024|DE|suv|rare|195
+# Iran / others still existing
+ikco_tara|Iran Khodro|Tara|Tara|2020|IR|sedan|common|113
+ikco_dena|Iran Khodro|Dena|Dena|2015|IR|sedan|common|113
+saipa_shahin|Saipa|Shahin|Shahin|2020|IR|sedan|common|110
+# Extra vans / crossovers on streets
+mercedes_sprinter_vs30|Mercedes-Benz|Sprinter|VS30|2018|DE|van|common|190
+ford_transit_custom|Ford|Transit Custom|V710|2023|US|van|common|150
+vw_transporter_t7|Volkswagen|Transporter|T7|2024|DE|van|rare|150
+toyota_hiace_commuter|Toyota|Hiace Commuter|H300|2019|JP|van|rare|150
+hyundai_staria_load_2|Hyundai|Staria Load|US4|2021|KR|van|common|177
+kia_carnival_lwb|Kia|Carnival LWB|KA4|2021|KR|mpv|rare|294
+# Last current nameplates
+genesis_gv70_magna|Genesis|GV70 Magma|JK1|2025|KR|suv|epic|490
+hyundai_ioniq6n|Hyundai|Ioniq 6 N|CE|2026|KR|sedan|epic|609
+kia_ev9_gt|Kia|EV9 GT|MV|2025|KR|suv|legendary|508
+bmw_neueklasse|BMW|iX3 Neue Klasse|NA5|2025|DE|suv|epic|402
+mercedes_cla_ev|Mercedes-Benz|CLA Electric|C174|2025|DE|sedan|epic|272
+porsche_718_ev|Porsche|718 Electric|PPE|2026|DE|coupe|legendary|402
+tesla_model_y_perf|Tesla|Model Y Performance|Juniper|2025|US|suv|epic|455

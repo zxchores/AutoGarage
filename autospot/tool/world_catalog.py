@@ -1,0 +1,488 @@
+#!/usr/bin/env python3
+"""Current worldwide production nameplates missing from the street catalog."""
+from __future__ import annotations
+
+from pathlib import Path
+
+OUT = Path(__file__).with_name("world_models.tsv")
+
+# id|make|model|gen|year|country|body|rarity|hp
+# One current/recent street nameplate per row. Existing catalog IDs are skipped later.
+RAW = r"""
+# --- Europe: SEAT / Cupra / Dacia / DS / Alpine / Smart / Polestar / Lotus ---
+seat_ibiza|Seat|Ibiza|KJ|2017|ES|hatch|common|110
+seat_leon|Seat|Leon|KL|2020|ES|hatch|common|150
+seat_arona|Seat|Arona|KJ|2017|ES|suv|common|115
+seat_ateca|Seat|Ateca|KH7|2016|ES|suv|common|150
+seat_tarraco|Seat|Tarraco|KN2|2018|ES|suv|rare|190
+cupra_formentor|Cupra|Formentor|KM7|2020|ES|suv|rare|310
+cupra_born|Cupra|Born|K11|2021|ES|hatch|rare|231
+cupra_leon|Cupra|Leon|KL|2020|ES|hatch|rare|300
+cupra_ateca|Cupra|Ateca|KH7|2018|ES|suv|rare|300
+cupra_tavascan|Cupra|Tavascan|MEB|2024|ES|suv|rare|340
+cupra_terramar|Cupra|Terramar|CM|2025|ES|suv|rare|265
+dacia_sandero|Dacia|Sandero|BJI|2020|RO|hatch|common|91
+dacia_duster|Dacia|Duster|P1310|2024|RO|suv|common|130
+dacia_jogger|Dacia|Jogger|RJI|2021|RO|mpv|common|110
+dacia_spring|Dacia|Spring|B100|2021|RO|suv|common|65
+dacia_bigster|Dacia|Bigster|CJD|2025|RO|suv|common|155
+dacia_logan|Dacia|Logan|LJI|2020|RO|sedan|common|91
+ds_3|DS|3|D34|2018|FR|suv|rare|130
+ds_4|DS|4|D41|2021|FR|hatch|rare|180
+ds_7|DS|7|X83|2017|FR|suv|rare|225
+ds_9|DS|9|X83|2020|FR|sedan|epic|360
+ds_n8|DS|N8|VFe|2025|FR|suv|epic|313
+alpine_a110|Alpine|A110|A110|2017|FR|coupe|epic|300
+alpine_a290|Alpine|A290|B10|2024|FR|hatch|rare|218
+alpine_a390|Alpine|A390|B10|2025|FR|suv|epic|400
+smart_1|Smart|#1|HX11|2022|DE|suv|rare|272
+smart_3|Smart|#3|HX11|2023|DE|suv|rare|272
+smart_5|Smart|#5|HX12|2024|DE|suv|rare|340
+polestar_2|Polestar|2|CMA|2020|SE|liftback|epic|408
+polestar_3|Polestar|3|SPA2|2024|SE|suv|epic|489
+polestar_4|Polestar|4|SEA|2024|SE|suv|epic|544
+lotus_emira|Lotus|Emira|Type 131|2022|GB|coupe|legendary|400
+lotus_eletre|Lotus|Eletre|Type 132|2023|GB|suv|legendary|603
+lotus_emeya|Lotus|Emeya|Type 133|2024|GB|sedan|legendary|603
+ineos_grenadier|Ineos|Grenadier|Ineos|2022|GB|offroad|epic|285
+ineos_quartermaster|Ineos|Quartermaster|Ineos|2023|GB|pickup|epic|285
+rimac_nevera|Rimac|Nevera|C_Two|2021|HR|coupe|legendary|1914
+lancia_ypsilon|Lancia|Ypsilon|L421|2024|IT|hatch|rare|156
+alfa_junior|Alfa Romeo|Junior|E331|2024|IT|suv|rare|240
+alfa_33stradale|Alfa Romeo|33 Stradale|33|2023|IT|coupe|legendary|620
+# --- Japan extras ---
+suzuki_alto|Suzuki|Alto|HA37|2021|JP|hatch|common|49
+suzuki_wagonr|Suzuki|Wagon R|MH95|2022|JP|hatch|common|64
+suzuki_spacia|Suzuki|Spacia|MK94|2023|JP|mpv|common|64
+suzuki_hustler|Suzuki|Hustler|MR92|2020|JP|suv|common|64
+suzuki_ignis|Suzuki|Ignis|MF|2020|JP|suv|common|83
+suzuki_baleno|Suzuki|Baleno|G4|2022|JP|hatch|common|90
+suzuki_celerio|Suzuki|Celerio|W|2021|JP|hatch|common|68
+suzuki_ertiga|Suzuki|Ertiga|NC|2018|JP|mpv|common|105
+suzuki_xl7|Suzuki|XL7|NC|2019|JP|suv|common|105
+suzuki_fronx|Suzuki|Fronx|J3|2023|JP|suv|common|103
+suzuki_invicto|Suzuki|Invicto|TNGA|2023|JP|mpv|rare|198
+suzuki_jimny5|Suzuki|Jimny 5-door|JB74|2023|JP|offroad|rare|102
+daihatsu_rocky|Daihatsu|Rocky|A200|2019|JP|suv|common|98
+daihatsu_taft|Daihatsu|Taft|LA900|2020|JP|suv|common|64
+daihatsu_move|Daihatsu|Move|LA150|2014|JP|hatch|common|52
+daihatsu_mira|Daihatsu|Mira e:S|LA350|2017|JP|hatch|common|52
+daihatsu_tanto|Daihatsu|Tanto|LA650|2019|JP|mpv|common|52
+daihatsu_hijet|Daihatsu|Hijet Cargo|S700|2021|JP|van|common|52
+daihatsu_atrai|Daihatsu|Atrai|S700|2021|JP|mpv|common|64
+isuzu_dmax|Isuzu|D-Max|TFR|2019|JP|pickup|rare|190
+isuzu_mux|Isuzu|MU-X|TFS|2020|JP|offroad|rare|190
+acura_integra|Acura|Integra|DE4|2022|US|hatch|rare|200
+acura_mdx|Acura|MDX|YD4|2021|US|suv|epic|290
+acura_rdx|Acura|RDX|TC2|2018|US|suv|rare|272
+acura_tlx|Acura|TLX|UB|2020|US|sedan|rare|272
+acura_zdx|Acura|ZDX|EV|2024|US|suv|epic|490
+acura_adx|Acura|ADX|SY|2025|US|suv|rare|190
+honda_zrv|Honda|ZR-V|RZ|2022|JP|suv|common|180
+honda_wrv|Honda|WR-V|DG4|2022|JP|suv|common|121
+honda_elevate|Honda|Elevate|DG4|2023|JP|suv|common|121
+honda_nbox|Honda|N-Box|JF5|2023|JP|hatch|common|64
+honda_freed|Honda|Freed|GT|2024|JP|mpv|common|118
+toyota_bz4x|Toyota|bZ4X|XEAM10|2022|JP|suv|rare|214
+toyota_crownsport|Toyota|Crown Sport|S236|2023|JP|suv|epic|234
+toyota_crownsignia|Toyota|Crown Signia|S235|2024|JP|wagon|epic|240
+toyota_grandhighlander|Toyota|Grand Highlander|XU70|2023|JP|suv|rare|265
+toyota_raize|Toyota|Raize|A200|2019|JP|suv|common|98
+toyota_innova|Toyota|Innova Zenix|AG10|2022|JP|mpv|rare|185
+toyota_avanza|Toyota|Avanza|W100|2021|JP|mpv|common|98
+toyota_veloz|Toyota|Veloz|W100|2021|JP|mpv|common|106
+toyota_rush|Toyota|Rush|F800|2017|JP|suv|common|104
+toyota_lc70|Toyota|Land Cruiser 70|GRJ76|2023|JP|offroad|epic|204
+toyota_hiace|Toyota|Hiace|H300|2019|JP|van|rare|150
+toyota_aygox|Toyota|Aygo X|AB70|2021|JP|hatch|common|72
+toyota_chr2|Toyota|C-HR|AX20|2023|JP|suv|rare|196
+toyota_urban_cruiser|Toyota|Urban Cruiser|Taisor|2023|JP|suv|common|103
+nissan_magnite|Nissan|Magnite|H10|2020|JP|suv|common|100
+nissan_rogue|Nissan|Rogue|T33|2020|JP|suv|rare|201
+nissan_versa|Nissan|Versa|N18|2019|JP|sedan|common|122
+nissan_sylphy|Nissan|Sylphy|B18|2019|JP|sedan|common|122
+nissan_armada|Nissan|Armada|Y63|2024|JP|offroad|epic|400
+nissan_frontier|Nissan|Frontier|D41|2021|JP|pickup|rare|310
+nissan_townstar|Nissan|Townstar|K26|2021|JP|van|common|130
+mazda_cx80|Mazda|CX-80|KL|2024|JP|suv|rare|254
+mazda_cx70|Mazda|CX-70|KJ|2024|JP|suv|rare|340
+mazda_mx30|Mazda|MX-30|DR|2020|JP|suv|rare|145
+mitsubishi_triton|Mitsubishi|Triton|LC|2023|JP|pickup|rare|204
+mitsubishi_xforce|Mitsubishi|Xforce|MC|2023|JP|suv|common|135
+subaru_forester6|Subaru|Forester|SK/SL|2024|JP|suv|rare|180
+# --- Korea extras ---
+hyundai_ioniq9|Hyundai|Ioniq 9|NE|2025|KR|suv|epic|320
+hyundai_santacruz|Hyundai|Santa Cruz|NX4|2021|KR|pickup|rare|281
+hyundai_casper|Hyundai|Casper|AX1|2021|KR|suv|common|76
+hyundai_alcazar|Hyundai|Alcazar|SU2|2021|KR|suv|common|157
+hyundai_nexo|Hyundai|Nexo|FE|2018|KR|suv|epic|161
+hyundai_ioniq5n|Hyundai|Ioniq 5 N|NE|2023|KR|suv|epic|641
+hyundai_tucson_nx4|Hyundai|Tucson Hybrid|NX4|2024|KR|suv|rare|230
+kia_ev3|Kia|EV3|SV|2024|KR|suv|rare|204
+kia_ev4|Kia|EV4|CL4|2025|KR|sedan|rare|204
+kia_ev5|Kia|EV5|OV|2024|KR|suv|rare|218
+kia_tasman|Kia|Tasman|TK|2025|KR|pickup|rare|276
+kia_syros|Kia|Syros|KY|2025|KR|suv|common|120
+kia_carens|Kia|Carens|KY|2022|KR|mpv|common|140
+kia_sonet|Kia|Sonet|QY|2020|KR|suv|common|120
+kia_k4|Kia|K4|CL4|2024|KR|sedan|common|190
+kia_pv5|Kia|PV5|PV|2025|KR|van|rare|120
+genesis_gv80coupe|Genesis|GV80 Coupe|JX1|2024|KR|suv|epic|375
+ssangyong_torres|KG Mobility|Torres|J100|2022|KR|suv|common|170
+ssangyong_torresev|KG Mobility|Torres EVX|J100|2023|KR|suv|rare|207
+ssangyong_musso|KG Mobility|Musso|Q200|2018|KR|pickup|common|187
+ssangyong_actyon|KG Mobility|Actyon|J100|2024|KR|suv|common|163
+# --- China: BYD family ---
+byd_qinplus|BYD|Qin Plus|DM-i|2021|CN|sedan|common|180
+byd_destroyer05|BYD|Destroyer 05|DM-i|2022|CN|sedan|common|197
+byd_sealion07|BYD|Sealion 07|EV|2024|CN|suv|rare|313
+byd_sealion05|BYD|Sealion 05|DM-i|2024|CN|suv|rare|218
+byd_tang|BYD|Tang|DM-p|2021|CN|suv|rare|517
+byd_dolphin|BYD|Dolphin|EA1|2021|CN|hatch|common|95
+byd_atto3|BYD|Atto 3|SC2E|2022|CN|suv|common|204
+byd_seal06|BYD|Seal 06|DM-i|2024|CN|sedan|rare|218
+byd_seal07|BYD|Seal 07|DM-i|2024|CN|sedan|rare|270
+byd_songplus|BYD|Song Plus|Champion|2023|CN|suv|rare|197
+byd_songl|BYD|Song L|EV|2023|CN|suv|rare|313
+byd_yuanup|BYD|Yuan Up|SC2E|2024|CN|suv|common|95
+byd_shark|BYD|Shark|Pickup|2024|CN|pickup|rare|430
+byd_yangwang_u8|Yangwang|U8|U8|2023|CN|offroad|legendary|1196
+byd_yangwang_u9|Yangwang|U9|U9|2023|CN|coupe|legendary|1287
+byd_bao5|Fangchengbao|Bao 5|Hi4-T|2023|CN|offroad|epic|680
+byd_bao8|Fangchengbao|Bao 8|Hi4-T|2024|CN|offroad|epic|680
+denza_d9|Denza|D9|D9|2022|CN|mpv|epic|376
+denza_n7|Denza|N7|N7|2023|CN|suv|epic|390
+denza_n8|Denza|N8|N8|2023|CN|suv|epic|376
+denza_n9|Denza|N9|N9|2025|CN|suv|epic|496
+# --- Geely / Lynk / Galaxy ---
+geely_galaxy_e8|Geely|Galaxy E8|GEA|2023|CN|sedan|rare|475
+geely_galaxy_e5|Geely|Galaxy E5|GEA|2024|CN|suv|rare|218
+geely_galaxy_l7|Geely|Galaxy L7|GEA|2023|CN|suv|rare|238
+geely_xingyue_l|Geely|Xingyue L|FY11|2021|CN|suv|rare|238
+geely_boyue_l|Geely|Boyue L|FS11|2022|CN|suv|common|218
+geely_icon|Geely|Icon|SX11|2020|CN|suv|common|177
+geely_geometry_c|Geely|Geometry C|GE11|2020|CN|suv|common|204
+lynk_01|Lynk & Co|01|CMA|2017|CN|suv|rare|254
+lynk_03|Lynk & Co|03|CMA|2018|CN|sedan|rare|254
+lynk_06|Lynk & Co|06|BMA|2020|CN|suv|rare|184
+lynk_07|Lynk & Co|07 EM-P|SEA|2023|CN|sedan|rare|436
+lynk_08|Lynk & Co|08 EM-P|SPA|2023|CN|suv|epic|436
+lynk_09|Lynk & Co|09|SPA|2021|CN|suv|epic|254
+lynk_z10|Lynk & Co|Z10|SEA|2024|CN|sedan|epic|544
+lynk_z20|Lynk & Co|Z20|SEA|2025|CN|suv|rare|272
+zeekr_007gt|Zeekr|007 GT|SEA|2025|CN|wagon|epic|646
+zeekr_mix|Zeekr|MIX|SEA|2024|CN|mpv|epic|422
+zeekr_9x|Zeekr|9X|SEA|2025|CN|suv|legendary|1300
+# --- Li / NIO / XPeng / Xiaomi ---
+li_l6|Li Auto|L6|L6|2024|CN|suv|epic|408
+li_l7|Li Auto|L7|L7|2023|CN|suv|epic|449
+li_l8|Li Auto|L8|L8|2022|CN|suv|epic|449
+li_l9|Li Auto|L9|L9|2022|CN|suv|epic|449
+li_mega|Li Auto|MEGA|MEGA|2024|CN|mpv|legendary|544
+li_i8|Li Auto|i8|i8|2025|CN|suv|epic|400
+nio_et5|NIO|ET5|NT2|2022|CN|sedan|epic|490
+nio_et7|NIO|ET7|NT2|2021|CN|sedan|epic|653
+nio_es6|NIO|ES6|NT2|2023|CN|suv|epic|490
+nio_es8|NIO|ES8|NT2|2022|CN|suv|epic|653
+nio_ec6|NIO|EC6|NT2|2023|CN|suv|epic|490
+nio_ec7|NIO|EC7|NT2|2023|CN|suv|epic|653
+nio_et9|NIO|ET9|NT3|2025|CN|sedan|legendary|707
+onvo_l60|Onvo|L60|NT3|2024|CN|suv|rare|240
+xpeng_g6|XPeng|G6|SEPA2|2023|CN|suv|rare|296
+xpeng_g9|XPeng|G9|SEPA2|2022|CN|suv|epic|551
+xpeng_p7|XPeng|P7|P7|2020|CN|sedan|rare|267
+xpeng_p7i|XPeng|P7i|P7|2023|CN|sedan|epic|474
+xpeng_x9|XPeng|X9|X9|2024|CN|mpv|epic|465
+xpeng_mona|XPeng|Mona M03|Mona|2024|CN|liftback|common|218
+xpeng_g7|XPeng|G7|SEPA2|2025|CN|suv|rare|296
+xiaomi_su7|Xiaomi|SU7|Modena|2024|CN|sedan|epic|673
+xiaomi_yu7|Xiaomi|YU7|Kunlun|2025|CN|suv|epic|690
+# --- Hongqi / Wuling / MG / SAIC ---
+hongqi_h5|Hongqi|H5|CA7200|2022|CN|sedan|rare|224
+hongqi_h6|Hongqi|H6|CA7201|2023|CN|sedan|rare|252
+hongqi_h9|Hongqi|H9|CA7460|2020|CN|sedan|epic|252
+hongqi_ehs9|Hongqi|E-HS9|CA7260|2020|CN|suv|epic|544
+hongqi_hs5|Hongqi|HS5|CA7204|2019|CN|suv|rare|224
+hongqi_hs7|Hongqi|HS7|CA7250|2019|CN|suv|epic|252
+hongqi_ls7|Hongqi|LS7|CA7600|2022|CN|suv|legendary|363
+hongqi_eh7|Hongqi|EH7|FS11|2024|CN|sedan|epic|340
+wuling_bingo|Wuling|Bingo|EV|2023|CN|hatch|common|68
+wuling_miniev|Wuling|Hongguang Mini EV|EV|2020|CN|hatch|common|41
+wuling_xingguang|Wuling|Xingguang|730|2023|CN|sedan|common|136
+wuling_victory|Wuling|Victory|730|2020|CN|mpv|common|148
+wuling_airev|Wuling|Air EV|EV|2022|CN|hatch|common|41
+baojun_yunduo|Baojun|Yunduo|EV|2023|CN|suv|common|136
+baojun_yep|Baojun|Yep|EV|2023|CN|suv|common|68
+mg_3|MG|3|C21|2024|CN|hatch|common|114
+mg_4|MG|4 EV|EH32|2022|CN|hatch|rare|204
+mg_5|MG|5|IP31|2020|CN|sedan|common|114
+mg_7|MG|7|EP|2023|CN|sedan|rare|261
+mg_hs|MG|HS|SAS2|2018|CN|suv|common|162
+mg_zs|MG|ZS|ZS11|2017|CN|suv|common|115
+mg_cyberster|MG|Cyberster|EH32|2023|CN|convertible|epic|536
+mg_marvelr|MG|Marvel R|EP|2021|CN|suv|rare|288
+mg_gt|MG|GT|IP31|2021|CN|sedan|common|114
+roewe_d7|Roewe|D7|EV|2023|CN|sedan|rare|211
+roewe_rx5|Roewe|RX5|RX5|2019|CN|suv|common|165
+roewe_imax8|Roewe|iMAX8|CS9|2020|CN|mpv|rare|185
+im_l6|IM Motors|L6|L6|2024|CN|sedan|epic|579
+im_l7|IM Motors|L7|L7|2022|CN|sedan|epic|579
+im_ls6|IM Motors|LS6|LS6|2023|CN|suv|epic|579
+im_ls7|IM Motors|LS7|LS7|2023|CN|suv|epic|579
+# --- Neta / Leapmotor / AITO / Avatr / Deepal ---
+neta_v|Neta|V|V|2020|CN|suv|common|70
+neta_x|Neta|X|X|2023|CN|suv|common|163
+neta_s|Neta|S|S|2022|CN|sedan|rare|340
+neta_gt|Neta|GT|S|2023|CN|coupe|rare|340
+neta_l|Neta|L|L|2024|CN|suv|rare|238
+leapmotor_c10|Leapmotor|C10|C10|2024|CN|suv|rare|218
+leapmotor_c11|Leapmotor|C11|C11|2021|CN|suv|rare|272
+leapmotor_c16|Leapmotor|C16|C16|2024|CN|suv|rare|215
+leapmotor_t03|Leapmotor|T03|T03|2020|CN|hatch|common|55
+leapmotor_b10|Leapmotor|B10|B10|2025|CN|suv|rare|218
+aito_m5|AITO|M5|SES|2022|CN|suv|epic|365
+aito_m7|AITO|M7|SES|2022|CN|suv|epic|365
+aito_m9|AITO|M9|SES|2023|CN|suv|legendary|496
+aito_m8|AITO|M8|SES|2025|CN|suv|epic|496
+avatr_11|Avatr|11|CHN|2022|CN|suv|epic|578
+avatr_12|Avatr|12|CHN|2023|CN|sedan|epic|578
+avatr_07|Avatr|07|CHN|2024|CN|suv|epic|390
+deepal_s07|Deepal|S07|C385|2023|CN|suv|rare|258
+deepal_sl03|Deepal|SL03|C385|2022|CN|sedan|rare|258
+deepal_s05|Deepal|S05|C385|2024|CN|suv|rare|190
+deepal_g318|Deepal|G318|C385|2024|CN|offroad|epic|316
+voyah_passion|Voyah|Passion|ESS|2022|CN|sedan|epic|510
+voyah_courage|Voyah|Courage|ESS|2024|CN|suv|epic|292
+# --- More Chinese street ---
+changan_uniz|Changan|UNI-Z|C385|2024|CN|suv|rare|215
+changan_cs95|Changan|CS95|S401|2017|CN|suv|rare|233
+changan_hunter|Changan|Hunter|Pickup|2020|CN|pickup|common|163
+changan_lumin|Changan|Lumin|EV|2022|CN|hatch|common|41
+haval_h6gt|Haval|H6 GT|B07|2021|CN|suv|rare|211
+haval_xiaolong|Haval|Xiaolong MAX|B07|2023|CN|suv|rare|246
+haval_raptor|Haval|Raptor|B01|2023|CN|pickup|rare|170
+ora_03|ORA|03|ES11|2020|CN|hatch|common|171
+ora_07|ORA|07|ES11|2022|CN|sedan|rare|204
+wey_05|WEY|05|P8|2023|CN|suv|epic|394
+wey_07|WEY|07|P8|2023|CN|suv|epic|394
+chery_exlantix_et|Exlantix|ET|T26|2024|CN|suv|epic|340
+chery_exlantix_es|Exlantix|ES|T26|2024|CN|sedan|epic|340
+chery_fulwin_t9|Chery|Fulwin T9|T1J|2024|CN|suv|rare|156
+chery_icar03|iCar|03|T1X|2023|CN|suv|common|135
+luxeed_s7|Luxeed|S7|Huawei|2023|CN|sedan|epic|496
+luxeed_r7|Luxeed|R7|Huawei|2024|CN|suv|epic|496
+gac_empow|GAC|Empow|A30|2021|CN|sedan|common|177
+gac_shadow|GAC|Shadow|S70|2023|CN|suv|rare|190
+aion_s|Aion|S|AEP|2019|CN|sedan|common|163
+aion_y|Aion|Y|AEP|2021|CN|suv|common|163
+aion_v|Aion|V|AEP|2020|CN|suv|rare|184
+aion_ut|Aion|UT|AEP|2024|CN|hatch|common|136
+aion_rt|Aion|RT|AEP|2024|CN|sedan|rare|204
+hyptec_gt|Hyptec|GT|AEP|2023|CN|sedan|epic|340
+forthing_t5|Forthing|T5 EVO|S50|2021|CN|suv|common|197
+forthing_yacht|Forthing|Yacht|M4|2022|CN|mpv|rare|197
+dongfeng_nammi|Dongfeng|Nammi 01|EV|2024|CN|hatch|common|95
+arcfox_alphas|Arcfox|Alpha S|BE21|2021|CN|sedan|epic|544
+arcfox_alphat|Arcfox|Alpha T|BE21|2020|CN|suv|epic|218
+maxus_g90|Maxus|G90|V90|2022|CN|mpv|rare|234
+maxus_mifa9|Maxus|MIFA 9|EV|2021|CN|mpv|epic|245
+maxus_t90|Maxus|T90|Pickup|2020|CN|pickup|common|163
+hiphi_x|HiPhi|X|X|2021|CN|suv|legendary|587
+hiphi_z|HiPhi|Z|Z|2022|CN|sedan|legendary|494
+hiphi_y|HiPhi|Y|Y|2023|CN|suv|epic|494
+jetour_x90|Jetour|X90 Plus|T1|2021|CN|suv|common|197
+jetour_traveler|Jetour|Traveler|T1|2023|CN|offroad|rare|187
+# --- US extras ---
+lincoln_nautilus|Lincoln|Nautilus|CDX706|2023|US|suv|epic|335
+lincoln_aviator|Lincoln|Aviator|U611|2019|US|suv|epic|400
+lincoln_navigator|Lincoln|Navigator|U554|2021|US|suv|epic|440
+lincoln_corsair|Lincoln|Corsair|CX482|2019|US|suv|rare|250
+buick_enclave|Buick|Enclave|C1XX|2017|US|suv|rare|310
+buick_envision|Buick|Envision|E2XX|2020|US|suv|rare|230
+buick_encoregx|Buick|Encore GX|VSS-S|2019|US|suv|common|155
+buick_envista|Buick|Envista|VSS-F|2023|US|suv|common|137
+gmc_sierra|GMC|Sierra 1500|T1XX|2018|US|pickup|epic|420
+gmc_yukon|GMC|Yukon|T1XX|2020|US|suv|epic|420
+gmc_acadia|GMC|Acadia|C1XX|2023|US|suv|rare|328
+gmc_terrain|GMC|Terrain|D2XX|2017|US|suv|common|175
+gmc_canyon|GMC|Canyon|T1XX|2023|US|pickup|rare|310
+gmc_hummer_ev|GMC|Hummer EV|BT1|2021|US|pickup|legendary|1000
+gmc_hummer_suv|GMC|Hummer EV SUV|BT1|2023|US|suv|legendary|830
+chrysler_pacifica|Chrysler|Pacifica|RU|2016|US|mpv|rare|287
+dodge_hornet|Dodge|Hornet|J6|2022|US|suv|rare|268
+jeep_recon|Jeep|Recon|STLA|2025|US|offroad|epic|375
+jeep_wagoneers|Jeep|Wagoneer S|STLA|2024|US|suv|epic|600
+cadillac_escaladeiq|Cadillac|Escalade IQ|BT1|2024|US|suv|legendary|750
+cadillac_optiq|Cadillac|Optiq|BEV3|2024|US|suv|epic|300
+cadillac_vistiq|Cadillac|Vistiq|BEV3|2025|US|suv|epic|515
+cadillac_celestiq|Cadillac|Celestiq|BT1|2024|US|sedan|legendary|600
+chevrolet_trax|Chevrolet|Trax|SGM|2022|US|suv|common|137
+chevrolet_equinoxev|Chevrolet|Equinox EV|BEV3|2023|US|suv|rare|213
+chevrolet_blazerev|Chevrolet|Blazer EV|BEV3|2023|US|suv|epic|557
+chevrolet_silveradoev|Chevrolet|Silverado EV|BT1|2023|US|pickup|epic|754
+ford_f150_lightning|Ford|F-150 Lightning|P702|2021|US|pickup|epic|580
+ford_maverick|Ford|Maverick|U540|2021|US|pickup|rare|250
+ford_puma|Ford|Puma|J2K|2019|DE|suv|common|125
+ford_ranger_raptor|Ford|Ranger Raptor|P703|2022|US|pickup|epic|292
+ford_tourneo|Ford|Tourneo Custom|V710|2023|US|mpv|rare|150
+rivian_r1t|Rivian|R1T|R1|2021|US|pickup|legendary|835
+rivian_r1s|Rivian|R1S|R1|2022|US|suv|legendary|835
+rivian_r2|Rivian|R2|R2|2026|US|suv|epic|400
+lucid_air|Lucid|Air|Air|2021|US|sedan|legendary|819
+lucid_gravity|Lucid|Gravity|Gravity|2024|US|suv|legendary|828
+vinfast_vf3|VinFast|VF 3|VF3|2024|VN|suv|common|43
+vinfast_vf5|VinFast|VF 5|VF5|2023|VN|suv|common|134
+vinfast_vf6|VinFast|VF 6|VF6|2023|VN|suv|rare|201
+vinfast_vf7|VinFast|VF 7|VF7|2023|VN|suv|rare|349
+vinfast_vf8|VinFast|VF 8|VF8|2022|VN|suv|epic|402
+vinfast_vf9|VinFast|VF 9|VF9|2023|VN|suv|epic|402
+# --- India / ASEAN ---
+tata_nexon|Tata|Nexon|X1|2017|IN|suv|common|120
+tata_punch|Tata|Punch|X1|2021|IN|suv|common|88
+tata_harrier|Tata|Harrier|X2|2019|IN|suv|rare|170
+tata_safari|Tata|Safari|X2|2021|IN|suv|rare|170
+tata_tiago|Tata|Tiago|X1|2016|IN|hatch|common|86
+tata_altroz|Tata|Altroz|X1|2019|IN|hatch|common|88
+tata_curvv|Tata|Curvv|X1|2024|IN|suv|common|125
+mahindra_xuv700|Mahindra|XUV700|W201|2021|IN|suv|rare|200
+mahindra_thar|Mahindra|Thar|AX3|2020|IN|offroad|rare|150
+mahindra_scorpio_n|Mahindra|Scorpio-N|W201|2022|IN|suv|rare|200
+mahindra_xuv3xo|Mahindra|XUV 3XO|W201|2024|IN|suv|common|130
+mahindra_be6|Mahindra|BE.6|INGLO|2024|IN|suv|rare|228
+mahindra_xev9e|Mahindra|XEV 9e|INGLO|2024|IN|suv|rare|282
+maruti_dzire|Maruti Suzuki|Dzire|Z|2020|IN|sedan|common|90
+maruti_brezza|Maruti Suzuki|Brezza|K15C|2022|IN|suv|common|103
+maruti_grandvitara|Maruti Suzuki|Grand Vitara|TNGA|2022|IN|suv|common|103
+proton_x50|Proton|X50|SX11|2020|MY|suv|common|177
+proton_x70|Proton|X70|NL-3|2018|MY|suv|common|184
+proton_x90|Proton|X90|FY11|2023|MY|suv|rare|190
+proton_s70|Proton|S7|FS11|2023|MY|sedan|common|190
+perodua_myvi|Perodua|Myvi|M800|2017|MY|hatch|common|103
+perodua_ativa|Perodua|Ativa|A200|2021|MY|suv|common|98
+perodua_alza|Perodua|Alza|W100|2022|MY|mpv|common|106
+# --- Russia extras ---
+aurus_senat|Aurus|Senat|Aurus|2018|RU|sedan|legendary|598
+aurus_komendant|Aurus|Komendant|Aurus|2022|RU|suv|legendary|598
+# --- More current EU / DE / FR / IT lineups ---
+vw_id7|Volkswagen|ID.7|MEB|2023|DE|sedan|rare|286
+vw_idbuzz|Volkswagen|ID.Buzz|MEB|2022|DE|mpv|epic|204
+vw_tiguan3|Volkswagen|Tiguan|3|2024|DE|suv|rare|204
+vw_tayron|Volkswagen|Tayron|3|2024|DE|suv|rare|204
+vw_golf8|Volkswagen|Golf|8|2019|DE|hatch|common|150
+vw_passat_b9|Volkswagen|Passat|B9|2023|DE|wagon|rare|204
+skoda_elroq|Skoda|Elroq|MEB|2024|CZ|suv|rare|204
+skoda_kodiaq2|Skoda|Kodiaq|2|2024|CZ|suv|rare|204
+skoda_superb4|Skoda|Superb|IV|2023|CZ|liftback|rare|204
+mercedes_eqe_suv|Mercedes-Benz|EQE SUV|X294|2022|DE|suv|epic|292
+mercedes_eqs_suv|Mercedes-Benz|EQS SUV|X296|2022|DE|suv|legendary|360
+mercedes_maybach_gls|Mercedes-Maybach|GLS|X167|2020|DE|suv|legendary|557
+mercedes_amg_gt4|Mercedes-AMG|GT 4-Door|X290|2018|DE|sedan|legendary|639
+mercedes_tclass|Mercedes-Benz|T-Class|W420|2022|DE|mpv|rare|163
+mercedes_citan|Mercedes-Benz|Citan|W420|2021|DE|van|common|116
+bmw_ix2|BMW|iX2|U10|2023|DE|suv|epic|313
+bmw_2series|BMW|2 Series Coupe|G42|2021|DE|coupe|rare|184
+audi_q6etron|Audi|Q6 e-tron|PPE|2024|DE|suv|epic|387
+audi_a6etron|Audi|A6 e-tron|PPE|2024|DE|sedan|epic|367
+renault_rafale|Renault|Rafale|Cjo|2024|FR|suv|rare|300
+renault_austral|Renault|Austral|RHN|2022|FR|suv|rare|200
+renault_scenic|Renault|Scenic E-Tech|HJB|2023|FR|suv|rare|220
+renault_5|Renault|5 E-Tech|B10|2024|FR|hatch|rare|150
+renault_clio|Renault|Clio|XJA|2019|FR|hatch|common|91
+renault_captur|Renault|Captur|XJB|2019|FR|suv|common|140
+renault_symbioz|Renault|Symbioz|XJC|2024|FR|suv|common|145
+renault_espace|Renault|Espace|RHN|2023|FR|mpv|rare|200
+renault_5turbo|Renault|5 Turbo 3E|B10|2025|FR|hatch|epic|540
+peugeot_e3008|Peugeot|E-3008|STLA|2023|FR|suv|rare|210
+peugeot_e5008|Peugeot|E-5008|STLA|2024|FR|suv|rare|210
+peugeot_e208|Peugeot|E-208|P21|2019|FR|hatch|common|136
+citroen_c5x|Citroen|C5 X|C|2021|FR|wagon|rare|180
+citroen_c3new|Citroen|C3|CC21|2024|FR|hatch|common|100
+citroen_c4x|Citroen|C4 X|C41|2022|FR|liftback|common|130
+fiat_600|Fiat|600|J3|2023|IT|suv|common|100
+fiat_grandepanda|Fiat|Grande Panda|CC21|2024|IT|hatch|common|100
+fiat_pulse|Fiat|Pulse|376|2021|IT|suv|common|130
+fiat_fastback|Fiat|Fastback|376|2022|IT|suv|common|130
+# --- More Japan / US current ---
+toyota_proace|Toyota|Proace City|K0|2019|JP|van|common|130
+toyota_mirai|Toyota|Mirai|JPD20|2020|JP|sedan|epic|182
+honda_prelude|Honda|Prelude|BB|2025|JP|coupe|rare|200
+infiniti_qx55|Infiniti|QX55|J55|2021|JP|suv|epic|268
+infiniti_qx80_new|Infiniti|QX80|Z63|2024|JP|suv|epic|450
+lexus_rz|Lexus|RZ|EA10|2022|JP|suv|epic|308
+subaru_wrxvb|Subaru|WRX|VB|2021|JP|sedan|epic|271
+# --- Extra current luxury / sports ---
+aston_db12|Aston Martin|DB12|AM|2023|GB|coupe|legendary|671
+aston_vantage|Aston Martin|Vantage|AM|2024|GB|coupe|legendary|656
+aston_dbx707|Aston Martin|DBX707|AM|2022|GB|suv|legendary|697
+aston_vanquish|Aston Martin|Vanquish|AM|2024|GB|coupe|legendary|824
+ferrari_purosangue|Ferrari|Purosangue|F175|2022|IT|suv|legendary|725
+ferrari_12cilindri|Ferrari|12Cilindri|F169|2024|IT|coupe|legendary|830
+ferrari_812|Ferrari|812 Superfast|F152M|2017|IT|coupe|legendary|800
+lambo_revuelto|Lamborghini|Revuelto|LB744|2023|IT|coupe|legendary|1001
+lambo_temerario|Lamborghini|Temerario|634|2024|IT|coupe|legendary|907
+lambo_urus_se|Lamborghini|Urus SE|LB736|2024|IT|suv|legendary|800
+mclaren_artura|McLaren|Artura|P14|2021|GB|coupe|legendary|680
+mclaren_750s|McLaren|750S|P10|2023|GB|coupe|legendary|740
+rolls_spectre|Rolls-Royce|Spectre|RR25|2023|GB|coupe|legendary|584
+bentley_flyingspur|Bentley|Flying Spur|3S|2019|GB|sedan|legendary|635
+maserati_granturismo|Maserati|GranTurismo|M189|2023|IT|coupe|legendary|550
+porsche_911_s_t|Porsche|911 S/T|992|2023|DE|coupe|legendary|518
+porsche_cayenne_ev|Porsche|Cayenne Electric|PPE|2025|DE|suv|legendary|469
+# --- More mass-market still on streets worldwide ---
+vw_caddy5|Volkswagen|Caddy|5|2020|DE|van|common|122
+vw_crafter|Volkswagen|Crafter|SY|2016|DE|van|common|177
+opel_frontera|Opel|Frontera|CC21|2024|DE|suv|common|136
+renault_kangoo|Renault|Kangoo|W|2021|FR|van|common|102
+renault_master|Renault|Master|X|2019|FR|van|common|150
+peugeot_rifter|Peugeot|Rifter|K0|2018|FR|mpv|common|130
+citroen_spacetourer|Citroen|SpaceTourer|V|2016|FR|mpv|rare|150
+fiat_scudo|Fiat|Scudo|V|2022|IT|van|common|145
+iveco_daily|Iveco|Daily|Daily|2019|IT|van|common|180
+# --- Extra China street volume 2024-2026 ---
+byd_qinl|BYD|Qin L|DM-i|2024|CN|sedan|common|218
+byd_seal05|BYD|Seal 05|DM-i|2024|CN|sedan|common|156
+byd_atto2|BYD|Atto 2|SA2|2025|CN|suv|common|177
+geely_galaxy_starship|Geely|Galaxy Starship 7|GEA|2024|CN|suv|rare|238
+chery_tiggo9l|Chery|Tiggo 9|T26|2023|CN|suv|rare|254
+omoda_e5|Omoda|E5|T1X|2023|CN|suv|rare|204
+jaecoo_j6|Jaecoo|J6|T1X|2024|CN|suv|rare|135
+haval_h6_3|Haval|H6|3rd|2024|CN|suv|common|204
+tank_400hi|Tank|400 Hi4-T|K50|2024|CN|offroad|epic|680
+gwm_cannon|GMC|Cannon|P|2020|CN|pickup|rare|163
+# fix: GWM Cannon not GMC
+"""
+
+
+def rows() -> list[str]:
+    out = []
+    seen = set()
+    for raw in RAW.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        # last-minute correction note lines
+        if line.startswith("fix:"):
+            continue
+        parts = line.split("|")
+        if len(parts) != 9:
+            raise SystemExit(f"bad row {line}")
+        cid = parts[0]
+        if cid in seen:
+            raise SystemExit(f"dup in world file {cid}")
+        seen.add(cid)
+        # GWM cannon was mistyped as GMC
+        if cid == "gwm_cannon":
+            parts[1] = "GWM"
+            parts[2] = "Cannon"
+        out.append("|".join(parts))
+    return out
+
+
+def main() -> None:
+    data = rows()
+    OUT.write_text("# id|make|model|gen|year|country|body|rarity|hp\n" + "\n".join(data) + "\n", encoding="utf-8")
+    print(f"wrote {len(data)} rows to {OUT.name}")
+
+
+if __name__ == "__main__":
+    main()

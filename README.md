@@ -4,7 +4,7 @@ Flutter-приложение для авто-споттинга: камера, �
 
 **Поставить:** [инструкция, APK и IPA](INSTALL.md)
 
-- [Android 1.4.0](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-android-arm64.apk)
+- [Android 1.4.1](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.1-android-arm64.apk)
 - [iOS 1.4.0](https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-ios.ipa)
 
 Код — в [`autospot/`](autospot/README.md).
