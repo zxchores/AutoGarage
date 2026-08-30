@@ -92,8 +92,7 @@ class StatChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: const TextStyle(color: AppColors.mute, fontSize: 11)),
+            Text(label, style: const TextStyle(color: AppColors.mute, fontSize: 11)),
             const SizedBox(height: 4),
             Text(
               value,
@@ -147,6 +146,28 @@ class SpotPhoto extends ConsumerWidget {
           child: child,
         );
       },
+    );
+  }
+}
+
+class CatalogThumb extends StatelessWidget {
+  const CatalogThumb({super.key, required this.spec, this.height});
+
+  final CarSpec spec;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      spec.imageAsset,
+      fit: BoxFit.cover,
+      height: height,
+      width: double.infinity,
+      errorBuilder: (_, _, _) => Container(
+        height: height,
+        color: AppColors.surface,
+        child: const Icon(Icons.directions_car, color: AppColors.mute),
+      ),
     );
   }
 }

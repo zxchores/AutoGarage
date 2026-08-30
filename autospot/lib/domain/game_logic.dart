@@ -48,34 +48,58 @@ LevelInfo levelFor(int xp) {
   );
 }
 
+XpBreakdown xpBreakdown({
+  required Rarity rarity,
+  required TuningFlags tuning,
+  required PhotoQuality photoQuality,
+  required bool duplicateModel,
+  required bool huntMatch,
+}) {
+  final base = switch (rarity) {
+    Rarity.common => 15,
+    Rarity.rare => 40,
+    Rarity.epic => 90,
+    Rarity.legendary => 200,
+  };
+  var tuningXp = 0;
+  if (tuning.isRareTuning) tuningXp += 25;
+  if (tuning.count >= 3) tuningXp += 10;
+  final photo = switch (photoQuality) {
+    PhotoQuality.poor => -5,
+    PhotoQuality.average => 0,
+    PhotoQuality.good => 10,
+    PhotoQuality.excellent => 18,
+  };
+  final hunt = huntMatch ? 25 : 0;
+  var total = base + tuningXp + photo + hunt;
+  if (duplicateModel) {
+    total = (total * 0.3).round();
+  }
+  return XpBreakdown(
+    base: base,
+    tuning: tuningXp,
+    photo: photo,
+    hunt: hunt,
+    duplicate: duplicateModel,
+    total: total.clamp(1, 400),
+  );
+}
+
 int xpForSpot({
   required Rarity rarity,
   required TuningFlags tuning,
   required PhotoQuality photoQuality,
   required Confidence confidence,
   required bool duplicateModel,
+  bool huntMatch = false,
 }) {
-  var xp = switch (rarity) {
-    Rarity.common => 15,
-    Rarity.rare => 40,
-    Rarity.epic => 90,
-    Rarity.legendary => 200,
-  };
-  if (tuning.isRareTuning) xp += 25;
-  if (tuning.count >= 3) xp += 10;
-  xp += switch (photoQuality) {
-    PhotoQuality.poor => -5,
-    PhotoQuality.average => 0,
-    PhotoQuality.good => 10,
-    PhotoQuality.excellent => 18,
-  };
-  if (confidence == Confidence.low) {
-    xp = (xp * 0.5).round();
-  }
-  if (duplicateModel) {
-    xp = (xp * 0.3).round();
-  }
-  return xp.clamp(1, 400);
+  return xpBreakdown(
+    rarity: rarity,
+    tuning: tuning,
+    photoQuality: photoQuality,
+    duplicateModel: duplicateModel,
+    huntMatch: huntMatch,
+  ).total;
 }
 
 Set<String> unlockedAchievements({
@@ -153,11 +177,25 @@ GarageStats statsFor(List<GarageCar> garage) {
   );
 }
 
+int duelXp(DuelRecord record) {
+  if (record.won) return 40;
+  if (record.draw) return 15;
+  return 5;
+}
+
+Duration? duelCooldownLeft(DateTime? last, {DateTime? now}) {
+  if (last == null) return null;
+  final left = last.add(const Duration(minutes: 3)).difference(now ?? DateTime.now());
+  return left.isNegative ? null : left;
+}
+
 DuelRecord runDuel({
   required String id,
   required DateTime createdAt,
   required GarageStats user,
-  required Rival rival,
+  required GarageStats rival,
+  required String rivalId,
+  required String rivalName,
 }) {
   var userPts = 0;
   var rivalPts = 0;
@@ -175,115 +213,122 @@ DuelRecord runDuel({
     }
   }
 
-  compare(
-    'rarest',
-    user.rarest.rank,
-    rival.rarest.rank,
-    user.rarest.ru,
-    rival.rarest.ru,
-  );
-  compare('value', user.value, rival.garageValue, '${user.value}', '${rival.garageValue}');
-  compare('hp', user.horsepower, rival.totalHp, '${user.horsepower}', '${rival.totalHp}');
+  compare('rarest', user.rarest.rank, rival.rarest.rank, user.rarest.ru, rival.rarest.ru);
+  compare('value', user.value, rival.value, '${user.value}', '${rival.value}');
+  compare('hp', user.horsepower, rival.horsepower, '${user.horsepower}', '${rival.horsepower}');
   compare('kits', user.bodykits, rival.bodykits, '${user.bodykits}', '${rival.bodykits}');
 
   return DuelRecord(
     id: id,
     createdAt: createdAt,
-    rivalId: rival.id,
-    rivalName: rival.name,
+    rivalId: rivalId,
+    rivalName: rivalName,
     userPoints: userPts,
     rivalPoints: rivalPts,
     breakdown: breakdown,
   );
 }
 
-List<Rival> rivalsForCity(String city, {int userXp = 0}) {
-  final seed = city.toLowerCase().hashCode.abs();
-  const names = [
-    'Nox',
-    'Raven',
-    'Кай',
-    'Mira',
-    'Volk',
-    'Алекс',
-    'DriftKid',
-    'Luna',
-    'Тихий',
-    'GTR_Ivan',
-    'Sofia',
-    'NightOwl',
-  ];
-  final list = <Rival>[];
-  for (var i = 0; i < 8; i++) {
-    final localSeed = seed + i * 97;
-    final rarity = Rarity.values[localSeed % 4];
-    list.add(
-      Rival(
-        id: 'rival_$city$i',
-        name: names[(seed + i) % names.length],
-        city: city.isEmpty ? 'Неизвестный город' : city,
-        xp: 80 + (localSeed % 4200) + (userXp * (i + 1) ~/ 14),
-        garageValue: 800000 + (localSeed % 25000000),
-        totalHp: 400 + (localSeed % 4200),
-        bodykits: localSeed % 9,
-        rarest: rarity,
-        carCount: 3 + localSeed % 18,
-      ),
-    );
+GarageStats ghostLineup(DateTime now) {
+  final seed = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
+  final picks = <CarSpec>[];
+  for (var i = 0; i < 3; i++) {
+    picks.add(carCatalog[(seed + i * 13) % carCatalog.length]);
   }
-  list.sort((a, b) => b.xp.compareTo(a.xp));
-  return list;
-}
-
-CarSpec fallbackSpec(VisionExtraction extraction) {
-  return CarSpec(
-    id: 'custom',
-    make: extraction.make.isEmpty ? 'Unknown' : extraction.make,
-    model: extraction.model.isEmpty ? 'Car' : extraction.model,
-    generation: extraction.generation,
-    yearFrom: extraction.yearFrom,
-    yearTo: extraction.yearTo,
-    bodyType: extraction.bodyType,
-    horsepower: 150,
-    zeroToHundred: 9.5,
-    drivetrain: 'FWD',
-    priceRub: 1800000,
-    rarity: Rarity.common,
+  var rarest = Rarity.common;
+  for (final car in picks) {
+    if (car.rarity.rank > rarest.rank) rarest = car.rarity;
+  }
+  return GarageStats(
+    value: picks.fold(0, (s, c) => s + c.priceRub),
+    horsepower: picks.fold(0, (s, c) => s + c.horsepower),
+    bodykits: 1,
+    rarest: rarest,
+    count: 3,
   );
 }
 
-IdentifiedSpot buildSpot({
+IdentifiedSpot buildIdentifiedSpot({
   required VisionExtraction extraction,
+  required CarSpec? spec,
   required List<int> photoBytes,
+  required String photoHash,
+  required List<String> photoHints,
   required List<GarageCar> garage,
   required bool fromAi,
+  required bool needsCatalogPick,
+  required bool huntMatch,
 }) {
-  final spec = matchCatalog(extraction.make, extraction.model);
-  final resolved = spec ?? fallbackSpec(extraction);
-  final rarity = spec?.rarity ?? Rarity.common;
-  final duplicate = garage.any(
-    (c) =>
-        c.make.toLowerCase() == resolved.make.toLowerCase() &&
-        c.model.toLowerCase() == resolved.model.toLowerCase(),
-  );
-  final xp = xpForSpot(
+  final resolved = spec;
+  final rarity = resolved?.rarity ?? Rarity.common;
+  final duplicate = resolved != null &&
+      garage.any(
+        (c) =>
+            c.make.toLowerCase() == resolved.make.toLowerCase() &&
+            c.model.toLowerCase() == resolved.model.toLowerCase(),
+      );
+  final breakdown = xpBreakdown(
     rarity: rarity,
     tuning: extraction.tuning,
     photoQuality: extraction.photoQuality,
-    confidence: extraction.confidence,
     duplicateModel: duplicate,
+    huntMatch: huntMatch && !duplicate,
   );
   return IdentifiedSpot(
     extraction: extraction,
-    spec: spec,
+    spec: resolved,
     rarity: rarity,
-    priceRub: spec?.priceRub ?? resolved.priceRub,
-    horsepower: spec?.horsepower ?? resolved.horsepower,
-    zeroToHundred: spec?.zeroToHundred ?? resolved.zeroToHundred,
-    drivetrain: spec?.drivetrain ?? resolved.drivetrain,
-    xp: xp,
+    priceRub: resolved?.priceRub ?? 0,
+    horsepower: resolved?.horsepower ?? 0,
+    zeroToHundred: resolved?.zeroToHundred ?? 0,
+    drivetrain: resolved?.drivetrain ?? '',
+    xp: needsCatalogPick ? 0 : breakdown.total,
+    breakdown: breakdown,
     duplicateModel: duplicate,
+    firstCatch: resolved != null && !duplicate,
     fromAi: fromAi,
+    needsCatalogPick: needsCatalogPick,
     photoBytes: photoBytes,
+    photoHash: photoHash,
+    photoHints: photoHints,
   );
+}
+
+IdentifiedSpot applyCatalogPick({
+  required IdentifiedSpot current,
+  required CarSpec spec,
+  required List<GarageCar> garage,
+  required bool huntMatch,
+}) {
+  final extraction = VisionExtraction(
+    isCar: true,
+    make: spec.make,
+    model: spec.model,
+    generation: spec.generation,
+    yearFrom: spec.yearFrom,
+    yearTo: spec.yearTo,
+    color: current.extraction.color,
+    bodyType: spec.bodyType,
+    confidence: current.extraction.confidence,
+    condition: current.extraction.condition,
+    tuning: current.extraction.tuning,
+    photoQuality: current.extraction.photoQuality,
+    notes: current.extraction.notes,
+  );
+  return buildIdentifiedSpot(
+    extraction: extraction,
+    spec: spec,
+    photoBytes: current.photoBytes,
+    photoHash: current.photoHash,
+    photoHints: current.photoHints,
+    garage: garage,
+    fromAi: current.fromAi,
+    needsCatalogPick: false,
+    huntMatch: huntMatch,
+  );
+}
+
+class DuplicatePhotoException implements Exception {
+  @override
+  String toString() => 'Это фото уже было в гараже';
 }

@@ -1,6 +1,7 @@
 import 'package:autospot/data/vision_service.dart';
 import 'package:autospot/domain/catalog.dart';
 import 'package:autospot/domain/game_logic.dart';
+import 'package:autospot/domain/meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -24,7 +25,7 @@ void main() {
     expect(legendary, lessThanOrEqualTo(400));
   });
 
-  test('duplicate model and low confidence reduce XP', () {
+  test('duplicate model reduces XP, first catch does not', () {
     final full = xpForSpot(
       rarity: Rarity.epic,
       tuning: const TuningFlags(bodykit: true),
@@ -36,17 +37,33 @@ void main() {
       rarity: Rarity.epic,
       tuning: const TuningFlags(bodykit: true),
       photoQuality: PhotoQuality.good,
-      confidence: Confidence.low,
+      confidence: Confidence.high,
       duplicateModel: true,
     );
     expect(reduced, lessThan(full));
     expect(reduced, greaterThanOrEqualTo(1));
   });
 
+  test('hunt bonus is listed in breakdown', () {
+    final xp = xpBreakdown(
+      rarity: Rarity.rare,
+      tuning: const TuningFlags(),
+      photoQuality: PhotoQuality.average,
+      duplicateModel: false,
+      huntMatch: true,
+    );
+    expect(xp.hunt, 25);
+    expect(xp.lines.any((e) => e.$1.contains('Охота')), isTrue);
+  });
+
   test('catalog matches aliases', () {
     expect(matchCatalog('BMW', 'M3')?.id, 'bmw_m3');
     expect(matchCatalog('VW', 'Polo')?.make, 'Volkswagen');
     expect(matchCatalog('Mercedes', 'C-Class')?.id, 'mercedes_c');
+  });
+
+  test('catalog cars have image assets', () {
+    expect(carCatalog.first.imageAsset, startsWith('assets/cars/'));
   });
 
   test('vision JSON parser reads tuning flags', () {
@@ -80,7 +97,6 @@ void main() {
     expect(parsed.make, 'Audi');
     expect(parsed.tuning.bodykit, isTrue);
     expect(parsed.tuning.count, 4);
-    expect(parsed.confidence, Confidence.high);
   });
 
   test('duel awards a point per winning metric', () {
@@ -91,26 +107,34 @@ void main() {
       rarest: Rarity.epic,
       count: 3,
     );
-    const rival = Rival(
-      id: 'r1',
-      name: 'Kai',
-      city: 'Москва',
-      xp: 100,
-      garageValue: 5,
-      totalHp: 100,
+    const rival = GarageStats(
+      value: 5,
+      horsepower: 100,
       bodykits: 0,
       rarest: Rarity.common,
-      carCount: 2,
+      count: 3,
     );
     final duel = runDuel(
       id: 'd1',
       createdAt: DateTime(2026, 1, 1),
       user: user,
       rival: rival,
+      rivalId: 'r1',
+      rivalName: 'Kai',
     );
     expect(duel.won, isTrue);
     expect(duel.userPoints, 4);
-    expect(duel.rivalPoints, 0);
+    expect(duelXp(duel), 40);
+  });
+
+  test('series progress counts german brands', () {
+    final garage = [
+      _car('BMW', '3 Series'),
+      _car('Audi', 'A4'),
+      _car('Mercedes-Benz', 'C-Class'),
+    ];
+    final german = carSeries.firstWhere((s) => s.id == 'german_trio');
+    expect(german.progress(garage), 3);
   });
 
   test('achievements unlock german trio and first spot', () {

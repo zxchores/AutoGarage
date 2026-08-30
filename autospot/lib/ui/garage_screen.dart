@@ -24,83 +24,117 @@ class GarageScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ГАРАЖ', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('ГАРАЖ',
+                            style: Theme.of(context).textTheme.headlineMedium),
+                      ),
+                      IconButton(
+                        onPressed: () => context.push('/map'),
+                        icon: const Icon(Icons.map_outlined),
+                      ),
+                      IconButton(
+                        onPressed: () => context.push('/collections'),
+                        icon: const Icon(Icons.collections_bookmark_outlined),
+                      ),
+                    ],
+                  ),
                   Text(
                     app.garage.isEmpty
-                        ? 'Пока пусто. Первый спот откроет коллекцию.'
+                        ? 'Пока пусто'
                         : '${app.garage.length} машин • ${compact(stats.value)}',
                     style: const TextStyle(color: AppColors.mute),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      StatChip(label: 'Л.с.', value: '${stats.horsepower}'),
-                      const SizedBox(width: 8),
-                      StatChip(label: 'Обвесы', value: '${stats.bodykits}'),
-                      const SizedBox(width: 8),
-                      StatChip(label: 'Топ', value: stats.rarest.ru),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ),
           if (app.garage.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  'Нажми «Спот» и поймай первую машину',
-                  style: TextStyle(color: AppColors.mute),
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.directions_car, size: 64, color: AppColors.mute),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Гараж пуст. Поймай первую машину на улице.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.mute),
+                    ),
+                    const SizedBox(height: 18),
+                    OrangeButton(
+                      label: 'Спотнуть',
+                      icon: Icons.camera_alt_rounded,
+                      onPressed: () => context.go('/spot'),
+                    ),
+                  ],
                 ),
               ),
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              sliver: SliverList.separated(
-                itemCount: app.garage.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final car = app.garage[index];
-                  return GlassCard(
-                    padding: const EdgeInsets.all(12),
-                    onTap: () => context.push('/car/${car.id}'),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 92,
-                          height: 72,
-                          child: SpotPhoto(photoId: car.photoId, borderRadius: 14),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              RarityBadge(rarity: car.rarity, compact: true),
-                              const SizedBox(height: 6),
-                              Text(
-                                car.title,
-                                style: const TextStyle(fontWeight: FontWeight.w800),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.78,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final car = app.garage[index];
+                    return GlassCard(
+                      padding: EdgeInsets.zero,
+                      onTap: () => context.push('/car/${car.id}'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(22),
                               ),
-                              Text(
-                                '${car.color} • +${car.xpEarned} XP',
-                                style: const TextStyle(
-                                  color: AppColors.mute,
-                                  fontSize: 12,
-                                ),
+                              child: SpotPhoto(
+                                photoId: car.photoId,
+                                borderRadius: 0,
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                        const Icon(Icons.chevron_right, color: AppColors.mute),
-                      ],
-                    ),
-                  );
-                },
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                RarityBadge(rarity: car.rarity, compact: true),
+                                const SizedBox(height: 4),
+                                Text(
+                                  car.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w800),
+                                ),
+                                Text(
+                                  '+${car.xpEarned} XP',
+                                  style: const TextStyle(
+                                    color: AppColors.orange,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  childCount: app.garage.length,
+                ),
               ),
             ),
         ],

@@ -1,70 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../domain/game_logic.dart';
 import '../state/app_controller.dart';
 import 'widgets.dart';
 
-class DuelsScreen extends ConsumerWidget {
+class DuelsScreen extends ConsumerStatefulWidget {
   const DuelsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DuelsScreen> createState() => _DuelsScreenState();
+}
+
+class _DuelsScreenState extends ConsumerState<DuelsScreen> {
+  final _picked = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
     final app = ref.watch(appProvider);
-    final profile = app.profile;
-    final city = profile?.city ?? '';
-    final rivals = rivalsForCity(city, userXp: profile?.xp ?? 0);
+    final left = duelCooldownLeft(app.lastDuelAt);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Дуэли гаражей')),
+      appBar: AppBar(title: const Text('Дуэль из 3 машин')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           const Text(
-            'Асинхронное сравнение: редкость, стоимость гаража, сумма л.с. и число обвесов. Каждая метрика — одно очко.',
+            'Выбери 3 карточки. Сравнение: редкость, цена, л.с., обвесы. Победа +40 XP, ничья +15, поражение +5. Кулдаун 3 минуты. Пока нет живых соперников — тренировка против состава дня.',
             style: TextStyle(color: AppColors.mute),
           ),
-          const SizedBox(height: 16),
-          Text('Соперники • ${city.isEmpty ? 'без города' : city}',
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          for (final rival in rivals)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                onTap: () {
-                  final record = ref.read(appProvider.notifier).duel(rival);
-                  showDialog<void>(
-                    context: context,
-                    builder: (_) => _DuelDialog(record: record, rival: rival),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(rival.name,
-                              style: const TextStyle(fontWeight: FontWeight.w800)),
-                          Text(
-                            '${rival.xp} XP • ${compact(rival.garageValue)}',
-                            style: const TextStyle(
-                              color: AppColors.mute,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.bolt, color: AppColors.orange),
-                  ],
-                ),
-              ),
+          if (left != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Следующая дуэль через ${left.inMinutes}:${(left.inSeconds % 60).toString().padLeft(2, '0')}',
+              style: const TextStyle(color: AppColors.gold),
             ),
-          const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 16),
+          if (app.garage.length < 3)
+            const Text('Нужно минимум 3 машины в гараже.')
+          else
+            ...app.garage.map((car) {
+              final on = _picked.contains(car.id);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassCard(
+                  onTap: () {
+                    setState(() {
+                      if (on) {
+                        _picked.remove(car.id);
+                      } else if (_picked.length < 3) {
+                        _picked.add(car.id);
+                      }
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        on ? Icons.check_circle : Icons.circle_outlined,
+                        color: on ? AppColors.orange : AppColors.mute,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          car.title,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      RarityBadge(rarity: car.rarity, compact: true),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          const SizedBox(height: 8),
+          OrangeButton(
+            label: 'В бой (${_picked.length}/3)',
+            icon: Icons.bolt_rounded,
+            onPressed: _picked.length == 3 && left == null
+                ? () {
+                    final lineup = app.garage
+                        .where((c) => _picked.contains(c.id))
+                        .toList();
+                    try {
+                      final record = ref.read(appProvider.notifier).duelWith(lineup);
+                      showDialog<void>(
+                        context: context,
+                        builder: (_) => _DuelDialog(record: record),
+                      );
+                      setState(() => _picked.clear());
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$e')),
+                      );
+                    }
+                  }
+                : null,
+          ),
+          const SizedBox(height: 18),
           const Text('История', style: TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           if (app.duels.isEmpty)
@@ -75,7 +109,7 @@ class DuelsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: GlassCard(
                   child: Text(
-                    '${duel.won ? 'Победа' : duel.draw ? 'Ничья' : 'Поражение'} vs ${duel.rivalName}  ${duel.userPoints}:${duel.rivalPoints}',
+                    '${duel.won ? 'Победа' : duel.draw ? 'Ничья' : 'Поражение'} vs ${duel.rivalName}  ${duel.userPoints}:${duel.rivalPoints}  (+${duelXp(duel)} XP)',
                   ),
                 ),
               ),
@@ -86,10 +120,9 @@ class DuelsScreen extends ConsumerWidget {
 }
 
 class _DuelDialog extends StatelessWidget {
-  const _DuelDialog({required this.record, required this.rival});
+  const _DuelDialog({required this.record});
 
   final DuelRecord record;
-  final Rival rival;
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +133,8 @@ class _DuelDialog extends StatelessWidget {
             : 'Поражение';
     const labels = {
       'rarest': 'Самая редкая',
-      'value': 'Стоимость гаража',
-      'hp': 'Суммарные л.с.',
+      'value': 'Стоимость',
+      'hp': 'Л.с.',
       'kits': 'Обвесы',
     };
     return AlertDialog(
@@ -110,6 +143,8 @@ class _DuelDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Text('+${duelXp(record)} XP'),
+          const SizedBox(height: 12),
           for (final entry in record.breakdown.entries)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),

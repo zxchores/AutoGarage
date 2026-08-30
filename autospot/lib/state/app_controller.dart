@@ -8,6 +8,7 @@ import '../data/local_store.dart';
 import '../data/location_service.dart';
 import '../data/vision_service.dart';
 import '../domain/game_logic.dart';
+import '../domain/meta.dart';
 
 final localStoreProvider = Provider<LocalStore>((ref) => LocalStore());
 final visionServiceProvider = Provider<VisionService>((ref) => VisionService());
@@ -41,6 +42,10 @@ class AppController extends Notifier<AppSnapshot> {
   }
 
   Future<void> _persist() => _store.save(state);
+
+  DailyHunt get hunt => huntFor(DateTime.now());
+
+  bool get huntDone => state.huntCompletedOn == huntDateKey(DateTime.now());
 
   Future<void> completeOnboarding(String name, String city) async {
     final profile = UserProfile(
@@ -81,25 +86,55 @@ class AppController extends Notifier<AppSnapshot> {
     await _persist();
   }
 
-  Future<IdentifiedSpot> identify(XFile file) async {
-    final bytes = await file.readAsBytes();
+  Future<IdentifiedSpot> identifyBytes(Uint8List bytes) async {
+    final hash = photoHashOf(bytes);
+    if (state.photoHashes.contains(hash)) {
+      throw DuplicatePhotoException();
+    }
     return ref.read(visionServiceProvider).identify(
-          photoBytes: Uint8List.fromList(bytes),
+          photoBytes: bytes,
           apiKey: state.apiKey,
           garage: state.garage,
         );
   }
 
+  Future<IdentifiedSpot> identify(XFile file) async {
+    return identifyBytes(Uint8List.fromList(await file.readAsBytes()));
+  }
+
+  IdentifiedSpot pickModel(IdentifiedSpot current, CarSpec spec) {
+    final huntHit = hunt.matchesSpot(
+      applyCatalogPick(
+        current: current,
+        spec: spec,
+        garage: state.garage,
+        huntMatch: false,
+      ),
+    );
+    return applyCatalogPick(
+      current: current,
+      spec: spec,
+      garage: state.garage,
+      huntMatch: huntHit && !huntDone,
+    );
+  }
+
   Future<GeoFix?> locate() => ref.read(locationServiceProvider).current();
 
   Future<List<String>> commitSpot(IdentifiedSpot spot, GeoFix? geo) async {
+    if (spot.spec == null || spot.needsCatalogPick) {
+      throw StateError('Сначала выбери модель из базы');
+    }
+    if (state.photoHashes.contains(spot.photoHash)) {
+      throw DuplicatePhotoException();
+    }
     final photoId = await _store.savePhoto(Uint8List.fromList(spot.photoBytes));
     final profile = state.profile;
     if (profile == null) {
       throw StateError('Нет профиля');
     }
     final city = (geo?.city.isNotEmpty == true) ? geo!.city : profile.city;
-    final spec = spot.spec;
+    final spec = spot.spec!;
     final extraction = spot.extraction;
     final car = GarageCar(
       id: _uuid.v4(),
@@ -108,27 +143,31 @@ class AppController extends Notifier<AppSnapshot> {
       city: city,
       lat: geo?.lat,
       lng: geo?.lng,
-      make: spot.make,
-      model: spot.model,
-      generation: spec?.generation ?? extraction.generation,
-      yearFrom: spec?.yearFrom ?? extraction.yearFrom,
-      yearTo: spec?.yearTo ?? extraction.yearTo,
+      make: spec.make,
+      model: spec.model,
+      generation: spec.generation,
+      yearFrom: spec.yearFrom,
+      yearTo: spec.yearTo,
       color: extraction.color,
-      bodyType: spec?.bodyType ?? extraction.bodyType,
-      rarity: spot.rarity,
-      priceRub: spot.priceRub,
-      horsepower: spot.horsepower,
-      zeroToHundred: spot.zeroToHundred,
-      drivetrain: spot.drivetrain,
+      bodyType: spec.bodyType,
+      rarity: spec.rarity,
+      priceRub: spec.priceRub,
+      horsepower: spec.horsepower,
+      zeroToHundred: spec.zeroToHundred,
+      drivetrain: spec.drivetrain,
       condition: extraction.condition,
       tuning: extraction.tuning,
       photoQuality: extraction.photoQuality,
       confidence: extraction.confidence,
       xpEarned: spot.xp,
-      catalogId: spec?.id,
+      catalogId: spec.id,
       fromAi: spot.fromAi,
     );
     final garage = [car, ...state.garage];
+    var huntOn = state.huntCompletedOn;
+    if (!huntDone && hunt.matches(car)) {
+      huntOn = huntDateKey(DateTime.now());
+    }
     final nextProfile = profile.copyWith(
       xp: profile.xp + spot.xp,
       city: city.isEmpty ? profile.city : city,
@@ -143,20 +182,37 @@ class AppController extends Notifier<AppSnapshot> {
       profile: nextProfile,
       garage: garage,
       achievements: after,
+      photoHashes: [...state.photoHashes, spot.photoHash],
+      huntCompletedOn: huntOn,
       clearError: true,
     );
     await _persist();
     return after.difference(before).toList();
   }
 
-  DuelRecord duel(Rival rival) {
+  DuelRecord duelWith(List<GarageCar> lineup) {
+    final left = duelCooldownLeft(state.lastDuelAt);
+    if (left != null) {
+      throw StateError('Подожди ${left.inMinutes + 1} мин до следующей дуэли');
+    }
+    if (lineup.length != 3) {
+      throw StateError('Выбери ровно 3 машины');
+    }
     final record = runDuel(
       id: _uuid.v4(),
       createdAt: DateTime.now(),
-      user: statsFor(state.garage),
-      rival: rival,
+      user: statsFor(lineup),
+      rival: ghostLineup(DateTime.now()),
+      rivalId: 'ghost',
+      rivalName: 'Тренировка',
     );
-    state = state.copyWith(duels: [record, ...state.duels]);
+    final xp = duelXp(record);
+    final profile = state.profile;
+    state = state.copyWith(
+      duels: [record, ...state.duels],
+      lastDuelAt: DateTime.now(),
+      profile: profile?.copyWith(xp: (profile.xp) + xp),
+    );
     _persist();
     return record;
   }

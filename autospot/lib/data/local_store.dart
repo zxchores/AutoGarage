@@ -16,6 +16,9 @@ class AppSnapshot {
     required this.achievements,
     required this.duels,
     required this.apiKey,
+    this.photoHashes = const [],
+    this.lastDuelAt,
+    this.huntCompletedOn,
     this.lastError,
   });
 
@@ -25,6 +28,9 @@ class AppSnapshot {
   final Set<String> achievements;
   final List<DuelRecord> duels;
   final String? apiKey;
+  final List<String> photoHashes;
+  final DateTime? lastDuelAt;
+  final String? huntCompletedOn;
   final String? lastError;
 
   bool get onboarded => profile != null && profile!.name.trim().isNotEmpty;
@@ -36,6 +42,9 @@ class AppSnapshot {
     Set<String>? achievements,
     List<DuelRecord>? duels,
     String? apiKey,
+    List<String>? photoHashes,
+    DateTime? lastDuelAt,
+    String? huntCompletedOn,
     String? lastError,
     bool clearError = false,
   }) =>
@@ -46,6 +55,9 @@ class AppSnapshot {
         achievements: achievements ?? this.achievements,
         duels: duels ?? this.duels,
         apiKey: apiKey ?? this.apiKey,
+        photoHashes: photoHashes ?? this.photoHashes,
+        lastDuelAt: lastDuelAt ?? this.lastDuelAt,
+        huntCompletedOn: huntCompletedOn ?? this.huntCompletedOn,
         lastError: clearError ? null : (lastError ?? this.lastError),
       );
 }
@@ -56,6 +68,9 @@ class LocalStore {
   static const _achievements = 'autospot.achievements';
   static const _duels = 'autospot.duels';
   static const _apiKey = 'autospot.apiKey';
+  static const _hashes = 'autospot.hashes';
+  static const _duelAt = 'autospot.lastDuel';
+  static const _hunt = 'autospot.hunt';
 
   final Map<String, Uint8List> memoryPhotos = {};
 
@@ -82,6 +97,9 @@ class LocalStore {
       achievements: achievements,
       duels: duels,
       apiKey: prefs.getString(_apiKey),
+      photoHashes: prefs.getStringList(_hashes) ?? const [],
+      lastDuelAt: DateTime.tryParse(prefs.getString(_duelAt) ?? ''),
+      huntCompletedOn: prefs.getString(_hunt),
     );
   }
 
@@ -107,6 +125,19 @@ class LocalStore {
       await prefs.remove(_apiKey);
     } else {
       await prefs.setString(_apiKey, key);
+    }
+    await prefs.setStringList(_hashes, snapshot.photoHashes);
+    final duelAt = snapshot.lastDuelAt;
+    if (duelAt == null) {
+      await prefs.remove(_duelAt);
+    } else {
+      await prefs.setString(_duelAt, duelAt.toIso8601String());
+    }
+    final hunt = snapshot.huntCompletedOn;
+    if (hunt == null) {
+      await prefs.remove(_hunt);
+    } else {
+      await prefs.setString(_hunt, hunt);
     }
   }
 

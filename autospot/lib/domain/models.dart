@@ -140,6 +140,8 @@ class CarSpec {
   String get title => '$make $model';
 
   String get years => '$yearFrom–$yearTo';
+
+  String get imageAsset => 'assets/cars/$id.png';
 }
 
 class GarageCar {
@@ -421,6 +423,32 @@ class VisionExtraction {
   final String notes;
 }
 
+class XpBreakdown {
+  const XpBreakdown({
+    required this.base,
+    required this.tuning,
+    required this.photo,
+    required this.hunt,
+    required this.duplicate,
+    required this.total,
+  });
+
+  final int base;
+  final int tuning;
+  final int photo;
+  final int hunt;
+  final bool duplicate;
+  final int total;
+
+  List<(String, String)> get lines => [
+        ('Редкость', '+$base'),
+        if (tuning != 0) ('Тюнинг', '+$tuning'),
+        if (photo != 0) ('Кадр', photo > 0 ? '+$photo' : '$photo'),
+        if (hunt != 0) ('Охота дня', '+$hunt'),
+        if (duplicate) ('Дубликат модели', '×0.3'),
+      ];
+}
+
 class IdentifiedSpot {
   const IdentifiedSpot({
     required this.extraction,
@@ -431,9 +459,14 @@ class IdentifiedSpot {
     required this.zeroToHundred,
     required this.drivetrain,
     required this.xp,
+    required this.breakdown,
     required this.duplicateModel,
+    required this.firstCatch,
     required this.fromAi,
+    required this.needsCatalogPick,
     required this.photoBytes,
+    required this.photoHash,
+    this.photoHints = const [],
   });
 
   final VisionExtraction extraction;
@@ -444,11 +477,16 @@ class IdentifiedSpot {
   final double zeroToHundred;
   final String drivetrain;
   final int xp;
+  final XpBreakdown breakdown;
   final bool duplicateModel;
+  final bool firstCatch;
   final bool fromAi;
+  final bool needsCatalogPick;
   final List<int> photoBytes;
+  final String photoHash;
+  final List<String> photoHints;
 
   String get make => spec?.make ?? extraction.make;
   String get model => spec?.model ?? extraction.model;
-  String get title => '$make $model';
+  String get title => spec == null ? 'Выбери модель' : '$make $model';
 }

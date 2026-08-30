@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../state/app_controller.dart';
 import '../ui/achievements_screen.dart';
 import '../ui/car_detail_screen.dart';
+import '../ui/collections_screen.dart';
 import '../ui/duels_screen.dart';
 import '../ui/garage_screen.dart';
 import '../ui/home_shell.dart';
 import '../ui/leaderboard_screen.dart';
+import '../ui/map_screen.dart';
 import '../ui/onboarding_screen.dart';
 import '../ui/profile_screen.dart';
 import '../ui/result_screen.dart';
@@ -64,6 +66,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/duels',
         builder: (context, state) => const DuelsScreen(),
+      ),
+      GoRoute(
+        path: '/map',
+        builder: (context, state) => const MapScreen(),
+      ),
+      GoRoute(
+        path: '/collections',
+        builder: (context, state) => const CollectionsScreen(),
       ),
       GoRoute(
         path: '/achievements',

@@ -61,6 +61,19 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           GlassCard(
+            onTap: () => context.push('/collections'),
+            child: const Row(
+              children: [
+                Expanded(
+                  child: Text('Серии-коллекции',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+                Icon(Icons.chevron_right, color: AppColors.mute),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          GlassCard(
             onTap: () => context.push('/achievements'),
             child: Row(
               children: [

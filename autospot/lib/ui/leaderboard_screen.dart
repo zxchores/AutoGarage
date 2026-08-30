@@ -16,26 +16,7 @@ class LeaderboardScreen extends ConsumerWidget {
     final app = ref.watch(appProvider);
     final profile = app.profile;
     final city = profile?.city ?? '';
-    final rivals = rivalsForCity(city, userXp: profile?.xp ?? 0);
-    final rows = [
-      ...rivals.map(
-        (r) => (
-          id: r.id,
-          name: r.name,
-          xp: r.xp,
-          value: r.garageValue,
-          me: false,
-        ),
-      ),
-      if (profile != null)
-        (
-          id: profile.id,
-          name: profile.name,
-          xp: profile.xp,
-          value: statsFor(app.garage).value,
-          me: true,
-        ),
-    ]..sort((a, b) => b.xp.compareTo(a.xp));
+    final stats = statsFor(app.garage);
 
     return SafeArea(
       child: ListView(
@@ -44,58 +25,55 @@ class LeaderboardScreen extends ConsumerWidget {
           Text('ГОРОД', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 6),
           Text(
-            city.isEmpty ? 'Укажи город в профиле' : 'Топ споттеров • $city',
+            city.isEmpty ? 'Укажи город в профиле' : city,
             style: const TextStyle(color: AppColors.mute),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OrangeButton(
-                  label: 'Дуэли',
-                  icon: Icons.bolt_rounded,
-                  onPressed: () => context.push('/duels'),
-                ),
-              ),
-            ],
+          GlassCard(
+            child: Text(
+              'Других игроков в городе пока нет. Ты первый.',
+              style: const TextStyle(height: 1.4),
+            ),
           ),
-          const SizedBox(height: 16),
-          for (var i = 0; i < rows.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: i < 3 ? AppColors.orange : AppColors.mute,
+          const SizedBox(height: 12),
+          if (profile != null)
+            GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              child: Row(
+                children: [
+                  const Text(
+                    '1',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${profile.name} (ты)',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        rows[i].me ? '${rows[i].name} (ты)' : rows[i].name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: rows[i].me ? AppColors.orange : AppColors.text,
+                        Text(
+                          '${profile.xp} XP • ${compact(stats.value)}',
+                          style: const TextStyle(color: AppColors.mute, fontSize: 12),
                         ),
-                      ),
+                      ],
                     ),
-                    Text('${rows[i].xp} XP'),
-                    const SizedBox(width: 10),
-                    Text(
-                      compact(rows[i].value),
-                      style: const TextStyle(color: AppColors.mute, fontSize: 12),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          const SizedBox(height: 16),
+          OrangeButton(
+            label: 'Дуэли',
+            icon: Icons.bolt_rounded,
+            onPressed: () => context.push('/duels'),
+          ),
         ],
       ),
     );

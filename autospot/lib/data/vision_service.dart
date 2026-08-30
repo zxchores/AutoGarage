@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 
 import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
@@ -18,6 +19,7 @@ Rules:
 - If unsure, still guess make/model but set confidence to "low".
 - Do not invent horsepower, 0-100 or market price. Those are filled by our catalog.
 - Tuning must be based only on what is visible.
+- make and model MUST match a production car.
 
 JSON schema:
 {
@@ -38,13 +40,89 @@ JSON schema:
     "vinyl": false,
     "exhaust": false,
     "lowered": false,
-    "details": ["optional visible notes"]
+    "details": []
   },
   "photo_quality": "poor|average|good|excellent",
   "visible_license_plate": false,
   "notes": "short visual notes"
 }
 ''';
+
+class PhotoAnalysis {
+  const PhotoAnalysis({
+    required this.quality,
+    required this.hints,
+    required this.color,
+  });
+
+  final PhotoQuality quality;
+  final List<String> hints;
+  final String color;
+}
+
+PhotoAnalysis analyzePhoto(Uint8List bytes) {
+  final hints = <String>[];
+  var quality = PhotoQuality.average;
+  var color = '';
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    return const PhotoAnalysis(
+      quality: PhotoQuality.poor,
+      hints: ['Не удалось прочитать кадр. Сними ещё раз.'],
+      color: '',
+    );
+  }
+  final minSide = decoded.width < decoded.height ? decoded.width : decoded.height;
+  if (minSide < 480) {
+    quality = PhotoQuality.poor;
+    hints.add('Кадр мелкий. Подойди ближе.');
+  } else if (minSide >= 1000) {
+    quality = PhotoQuality.good;
+  }
+
+  var brightness = 0;
+  var r = 0, g = 0, b = 0;
+  const step = 17;
+  var n = 0;
+  for (var y = 0; y < decoded.height; y += step) {
+    for (var x = 0; x < decoded.width; x += step) {
+      final p = decoded.getPixel(x, y);
+      r += p.r.toInt();
+      g += p.g.toInt();
+      b += p.b.toInt();
+      brightness += (p.r + p.g + p.b).toInt();
+      n++;
+    }
+  }
+  if (n > 0) {
+    final avg = brightness / (n * 3);
+    if (avg < 38) {
+      hints.add('Темно. Ищи свет или вспышку.');
+      if (quality == PhotoQuality.good) quality = PhotoQuality.average;
+    } else if (avg > 230) {
+      hints.add('Пересвет. Отойди от прямого солнца.');
+    }
+    final rr = r / n, gg = g / n, bb = b / n;
+    color = _guessColor(rr, gg, bb);
+  }
+  hints.add('Снимай машину целиком, не обрезай колёса.');
+  return PhotoAnalysis(quality: quality, hints: hints, color: color);
+}
+
+String _guessColor(double r, double g, double b) {
+  final max = [r, g, b].reduce((a, c) => a > c ? a : c);
+  final min = [r, g, b].reduce((a, c) => a < c ? a : c);
+  if (max < 45) return 'чёрный';
+  if (min > 200) return 'белый';
+  if (max - min < 18) return r > 150 ? 'серебристый' : 'серый';
+  if (r > g && r > b) return 'красный';
+  if (b > r && b > g) return 'синий';
+  if (g > r && g > b) return 'зелёный';
+  if (r > 160 && g > 140 && b < 90) return 'жёлтый';
+  return 'серый';
+}
+
+String photoHashOf(Uint8List bytes) => sha256.convert(bytes).toString();
 
 class VisionService {
   VisionService({http.Client? client}) : _client = client ?? http.Client();
@@ -56,23 +134,55 @@ class VisionService {
     required String? apiKey,
     required List<GarageCar> garage,
   }) async {
+    final hash = photoHashOf(photoBytes);
+    final analysis = analyzePhoto(photoBytes);
     final key = apiKey?.trim();
-    if (key == null || key.isEmpty) {
-      return _mock(photoBytes, garage);
+    if (key != null && key.isNotEmpty) {
+      try {
+        final extraction = key.startsWith('sk-')
+            ? await _openAi(photoBytes, key)
+            : await _gemini(photoBytes, key);
+        final spec = matchCatalog(extraction.make, extraction.model);
+        return buildIdentifiedSpot(
+          extraction: extraction,
+          spec: spec,
+          photoBytes: photoBytes,
+          photoHash: hash,
+          photoHints: analysis.hints,
+          garage: garage,
+          fromAi: true,
+          needsCatalogPick: spec == null,
+          huntMatch: false,
+        );
+      } catch (_) {
+        // fall through to catalog pick — never invent a random car
+      }
     }
-    try {
-      final extraction = key.startsWith('sk-')
-          ? await _openAi(photoBytes, key)
-          : await _gemini(photoBytes, key);
-      return buildSpot(
-        extraction: extraction,
-        photoBytes: photoBytes,
-        garage: garage,
-        fromAi: true,
-      );
-    } catch (_) {
-      return _mock(photoBytes, garage);
-    }
+    return buildIdentifiedSpot(
+      extraction: VisionExtraction(
+        isCar: true,
+        make: '',
+        model: '',
+        generation: '',
+        yearFrom: 0,
+        yearTo: 0,
+        color: analysis.color,
+        bodyType: '',
+        confidence: Confidence.low,
+        condition: CarCondition.good,
+        tuning: const TuningFlags(),
+        photoQuality: analysis.quality,
+        notes: 'Выбери модель из базы. ИИ не подставляем наугад.',
+      ),
+      spec: null,
+      photoBytes: photoBytes,
+      photoHash: hash,
+      photoHints: analysis.hints,
+      garage: garage,
+      fromAi: false,
+      needsCatalogPick: true,
+      huntMatch: false,
+    );
   }
 
   Future<VisionExtraction> _gemini(Uint8List bytes, String key) async {
@@ -97,13 +207,13 @@ class VisionService {
           },
         ],
         'generationConfig': {
-          'temperature': 0.2,
+          'temperature': 0.1,
           'responseMimeType': 'application/json',
         },
       }),
     );
     if (response.statusCode >= 400) {
-      throw Exception('Gemini ${response.statusCode}: ${response.body}');
+      throw Exception('Gemini ${response.statusCode}');
     }
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     final text = payload['candidates'][0]['content']['parts'][0]['text'] as String;
@@ -121,7 +231,7 @@ class VisionService {
       body: jsonEncode({
         'model': 'gpt-4o-mini',
         'response_format': {'type': 'json_object'},
-        'temperature': 0.2,
+        'temperature': 0.1,
         'messages': [
           {'role': 'system', 'content': visionPrompt},
           {
@@ -139,61 +249,13 @@ class VisionService {
       }),
     );
     if (response.statusCode >= 400) {
-      throw Exception('OpenAI ${response.statusCode}: ${response.body}');
+      throw Exception('OpenAI ${response.statusCode}');
     }
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     final text = payload['choices'][0]['message']['content'] as String;
     return parseVisionJson(text);
   }
-
-  IdentifiedSpot _mock(Uint8List bytes, List<GarageCar> garage) {
-    var hash = 0;
-    for (final b in bytes.take(4000)) {
-      hash = (hash * 33 + b) & 0x7fffffff;
-    }
-    final spec = carCatalog[hash % carCatalog.length];
-    final extraction = VisionExtraction(
-      isCar: true,
-      make: spec.make,
-      model: spec.model,
-      generation: spec.generation,
-      yearFrom: spec.yearFrom,
-      yearTo: spec.yearTo,
-      color: _colors[hash % _colors.length],
-      bodyType: spec.bodyType,
-      confidence: Confidence.values[hash % 3],
-      condition: CarCondition.values[hash % CarCondition.values.length],
-      tuning: TuningFlags(
-        bodykit: hash.isEven,
-        wheels: (hash ~/ 2).isEven,
-        spoiler: hash % 3 == 0,
-        vinyl: hash % 7 == 0,
-        exhaust: hash % 5 == 0,
-        lowered: hash % 4 == 0,
-        details: const [],
-      ),
-      photoQuality: PhotoQuality.values[min(hash % 4, 3)],
-      notes: 'Демо-режим без ключа Vision API. Та же фотография даёт ту же машину.',
-    );
-    return buildSpot(
-      extraction: extraction,
-      photoBytes: bytes,
-      garage: garage,
-      fromAi: false,
-    );
-  }
 }
-
-const _colors = [
-  'чёрный',
-  'белый',
-  'серый',
-  'синий',
-  'красный',
-  'зелёный',
-  'жёлтый',
-  'серебристый',
-];
 
 VisionExtraction parseVisionJson(String raw) {
   final cleaned = raw.trim().replaceAll(RegExp(r'```json|```'), '').trim();
@@ -209,8 +271,7 @@ VisionExtraction parseVisionJson(String raw) {
     color: '${json['color'] ?? ''}',
     bodyType: '${json['body_type'] ?? ''}',
     confidence: _enum(Confidence.values, json['confidence'], Confidence.medium),
-    condition:
-        _enum(CarCondition.values, json['condition'], CarCondition.good),
+    condition: _enum(CarCondition.values, json['condition'], CarCondition.good),
     tuning: TuningFlags(
       bodykit: tuning['bodykit'] == true,
       wheels: tuning['wheels'] == true,
@@ -218,9 +279,7 @@ VisionExtraction parseVisionJson(String raw) {
       vinyl: tuning['vinyl'] == true,
       exhaust: tuning['exhaust'] == true,
       lowered: tuning['lowered'] == true,
-      details: ((tuning['details'] as List?) ?? const [])
-          .map((e) => '$e')
-          .toList(),
+      details: ((tuning['details'] as List?) ?? const []).map((e) => '$e').toList(),
     ),
     photoQuality:
         _enum(PhotoQuality.values, json['photo_quality'], PhotoQuality.average),
