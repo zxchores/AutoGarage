@@ -92,6 +92,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
           ),
+          const SizedBox(height: 28),
+          const Text('Аккаунт', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () async {
+              await ref.read(appProvider.notifier).logout();
+            },
+            child: const Text('Выйти'),
+          ),
         ],
       ),
     );

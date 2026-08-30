@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/app_permissions.dart';
+import '../data/auth.dart';
 import '../data/local_store.dart';
 import '../data/location_service.dart';
 import '../data/vision_service.dart';
@@ -20,6 +22,9 @@ final appProvider =
 
 class AppController extends Notifier<AppSnapshot> {
   static const _uuid = Uuid();
+
+  UserAccount? _pendingAccount;
+  UserAccount? _pendingLogin;
 
   @override
   AppSnapshot build() {
@@ -47,23 +52,119 @@ class AppController extends Notifier<AppSnapshot> {
 
   bool get huntDone => state.huntCompletedOn == huntDateKey(DateTime.now());
 
-  Future<void> completeOnboarding(String name, String city) async {
-    final profile = UserProfile(
+  Future<UserAccount> startRegister({
+    required String login,
+    required String password,
+    required String name,
+    required String city,
+  }) async {
+    final normalized = normalizeLogin(login);
+    if (normalized.length < 3) {
+      throw AuthException('Логин слишком короткий');
+    }
+    if (!RegExp(r'^[a-z0-9._-]{3,24}$').hasMatch(normalized)) {
+      throw AuthException('Логин: латиница, цифры, точка или _');
+    }
+    if (!passwordLooksOk(password)) {
+      throw AuthException('Пароль минимум 6 символов');
+    }
+    final nick = name.trim().isEmpty ? normalized : name.trim();
+    final accounts = await _store.loadAccounts();
+    if (accounts.any((a) => a.login == normalized)) {
+      throw AuthException('Такой логин уже занят');
+    }
+    final salt = newSalt();
+    final account = UserAccount(
       id: _uuid.v4(),
-      name: name.trim().isEmpty ? 'Споттер' : name.trim(),
+      login: normalized,
+      salt: salt,
+      passwordHash: hashPassword(password, salt),
+      totpSecret: newTotpSecret(),
+      name: nick,
       city: city.trim(),
-      xp: 0,
       createdAt: DateTime.now(),
     );
-    state = state.copyWith(
-      profile: profile,
-      achievements: unlockedAchievements(
-        garage: state.garage,
-        city: profile.city,
-        already: state.achievements,
-      ),
+    _pendingAccount = account;
+    _pendingLogin = null;
+    return account;
+  }
+
+  Future<void> confirmRegister(String code) async {
+    final pending = _pendingAccount;
+    if (pending == null) {
+      throw AuthException('Сначала заполни регистрацию');
+    }
+    if (!totpVerify(pending.totpSecret, code)) {
+      throw AuthException('Неверный код 2FA');
+    }
+    final accounts = [...await _store.loadAccounts(), pending];
+    await _store.saveAccounts(accounts);
+    await _store.setSession(pending.id);
+    await _store.migrateLegacyIfNeeded(pending.id);
+    final profile = UserProfile(
+      id: pending.id,
+      name: pending.name,
+      city: pending.city,
+      xp: 0,
+      createdAt: pending.createdAt,
+      login: pending.login,
     );
-    await _persist();
+    _pendingAccount = null;
+    await reload();
+    if (state.profile == null) {
+      state = state.copyWith(
+        sessionUserId: pending.id,
+        profile: profile,
+        achievements: unlockedAchievements(
+          garage: state.garage,
+          city: profile.city,
+          already: state.achievements,
+        ),
+      );
+      await _persist();
+    }
+    await AppPermissions.requestAll();
+  }
+
+  Future<void> startLogin({
+    required String login,
+    required String password,
+  }) async {
+    final normalized = normalizeLogin(login);
+    final accounts = await _store.loadAccounts();
+    UserAccount? match;
+    for (final account in accounts) {
+      if (account.login == normalized) match = account;
+    }
+    if (match == null) {
+      throw AuthException('Нет такого логина');
+    }
+    if (hashPassword(password, match.salt) != match.passwordHash) {
+      throw AuthException('Неверный пароль');
+    }
+    _pendingLogin = match;
+    _pendingAccount = null;
+  }
+
+  Future<void> confirmLogin(String code) async {
+    final pending = _pendingLogin;
+    if (pending == null) {
+      throw AuthException('Сначала введи логин и пароль');
+    }
+    if (!totpVerify(pending.totpSecret, code)) {
+      throw AuthException('Неверный код 2FA');
+    }
+    await _store.setSession(pending.id);
+    _pendingLogin = null;
+    await reload();
+    await AppPermissions.requestAll();
+  }
+
+  Future<void> logout() async {
+    await _store.setSession(null);
+    _pendingAccount = null;
+    _pendingLogin = null;
+    state = state.copyWith(clearSession: true, ready: true);
   }
 
   Future<void> updateProfile({String? name, String? city}) async {
@@ -91,39 +192,37 @@ class AppController extends Notifier<AppSnapshot> {
     if (state.photoHashes.contains(hash)) {
       throw DuplicatePhotoException();
     }
-    return ref.read(visionServiceProvider).identify(
+    final raw = await ref.read(visionServiceProvider).identify(
           photoBytes: bytes,
           apiKey: state.apiKey,
           garage: state.garage,
+          huntMatch: false,
         );
+    if (raw.spec != null && hunt.matchesSpot(raw) && !huntDone) {
+      return buildIdentifiedSpot(
+        extraction: raw.extraction,
+        spec: raw.spec,
+        photoBytes: raw.photoBytes,
+        photoHash: raw.photoHash,
+        photoHints: raw.photoHints,
+        garage: state.garage,
+        fromAi: raw.fromAi,
+        needsCatalogPick: false,
+        huntMatch: true,
+      );
+    }
+    return raw;
   }
 
   Future<IdentifiedSpot> identify(XFile file) async {
     return identifyBytes(Uint8List.fromList(await file.readAsBytes()));
   }
 
-  IdentifiedSpot pickModel(IdentifiedSpot current, CarSpec spec) {
-    final huntHit = hunt.matchesSpot(
-      applyCatalogPick(
-        current: current,
-        spec: spec,
-        garage: state.garage,
-        huntMatch: false,
-      ),
-    );
-    return applyCatalogPick(
-      current: current,
-      spec: spec,
-      garage: state.garage,
-      huntMatch: huntHit && !huntDone,
-    );
-  }
-
   Future<GeoFix?> locate() => ref.read(locationServiceProvider).current();
 
   Future<List<String>> commitSpot(IdentifiedSpot spot, GeoFix? geo) async {
-    if (spot.spec == null || spot.needsCatalogPick) {
-      throw StateError('Сначала выбери модель из базы');
+    if (spot.spec == null) {
+      throw StateError('Модель не распознана');
     }
     if (state.photoHashes.contains(spot.photoHash)) {
       throw DuplicatePhotoException();
@@ -136,6 +235,20 @@ class AppController extends Notifier<AppSnapshot> {
     final city = (geo?.city.isNotEmpty == true) ? geo!.city : profile.city;
     final spec = spot.spec!;
     final extraction = spot.extraction;
+    var resolved = spot;
+    if (!spot.breakdown.duplicate && hunt.matchesSpot(spot) && !huntDone) {
+      resolved = buildIdentifiedSpot(
+        extraction: extraction,
+        spec: spec,
+        photoBytes: spot.photoBytes,
+        photoHash: spot.photoHash,
+        photoHints: spot.photoHints,
+        garage: state.garage,
+        fromAi: spot.fromAi,
+        needsCatalogPick: false,
+        huntMatch: true,
+      );
+    }
     final car = GarageCar(
       id: _uuid.v4(),
       photoId: photoId,
@@ -159,9 +272,9 @@ class AppController extends Notifier<AppSnapshot> {
       tuning: extraction.tuning,
       photoQuality: extraction.photoQuality,
       confidence: extraction.confidence,
-      xpEarned: spot.xp,
+      xpEarned: resolved.xp,
       catalogId: spec.id,
-      fromAi: spot.fromAi,
+      fromAi: resolved.fromAi,
     );
     final garage = [car, ...state.garage];
     var huntOn = state.huntCompletedOn;
@@ -169,7 +282,7 @@ class AppController extends Notifier<AppSnapshot> {
       huntOn = huntDateKey(DateTime.now());
     }
     final nextProfile = profile.copyWith(
-      xp: profile.xp + spot.xp,
+      xp: profile.xp + resolved.xp,
       city: city.isEmpty ? profile.city : city,
     );
     final before = state.achievements;
@@ -182,7 +295,7 @@ class AppController extends Notifier<AppSnapshot> {
       profile: nextProfile,
       garage: garage,
       achievements: after,
-      photoHashes: [...state.photoHashes, spot.photoHash],
+      photoHashes: [...state.photoHashes, resolved.photoHash],
       huntCompletedOn: huntOn,
       clearError: true,
     );

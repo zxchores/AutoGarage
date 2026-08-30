@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/theme.dart';
+import '../data/app_permissions.dart';
 import '../data/location_service.dart';
 import '../domain/game_logic.dart';
 import '../state/app_controller.dart';
@@ -56,6 +57,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
   }
 
   Future<void> _openCamera() async {
+    await AppPermissions.requestAll();
     try {
       final cams = await availableCameras();
       if (cams.isEmpty) {
@@ -101,6 +103,18 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
           const SnackBar(content: Text('Это фото уже было в гараже')),
         );
       }
+    } on NoCarFoundException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } on RecognitionFailedException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +145,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
 
   @override
   Widget build(BuildContext context) {
-    final app = ref.watch(appProvider);
+    ref.watch(appProvider);
     final hunt = ref.read(appProvider.notifier).hunt;
     final huntDone = ref.read(appProvider.notifier).huntDone;
     final ready = _camera?.value.isInitialized == true;
@@ -232,14 +246,13 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
                   ],
                 ),
               ),
-              if (app.apiKey == null || app.apiKey!.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Без ключа ИИ модель выбираешь из базы сам',
-                    style: TextStyle(color: AppColors.mute, fontSize: 12),
-                  ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Наведи на машину — модель определится сама',
+                  style: TextStyle(color: AppColors.mute, fontSize: 12),
                 ),
+              ),
             ],
           ),
         ),

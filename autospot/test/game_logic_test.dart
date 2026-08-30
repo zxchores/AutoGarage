@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
+import 'package:autospot/data/auth.dart';
 import 'package:autospot/data/vision_service.dart';
 import 'package:autospot/domain/catalog.dart';
 import 'package:autospot/domain/game_logic.dart';
 import 'package:autospot/domain/meta.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 void main() {
   test('XP grows with rarity and rare tuning', () {
@@ -135,6 +139,29 @@ void main() {
     ];
     final german = carSeries.firstWhere((s) => s.id == 'german_trio');
     expect(german.progress(garage), 3);
+  });
+
+  test('vision JSON without a car stays is_car false', () {
+    const raw = '''
+    {"is_car": false, "make": "", "model": "", "generation": "", "year_from": 0, "year_to": 0,
+     "body_type": "", "color": "", "confidence": "low", "condition": "good",
+     "tuning": {}, "photo_quality": "poor", "visible_license_plate": false, "notes": ""}
+    ''';
+    expect(parseVisionJson(raw).isCar, isFalse);
+  });
+
+  test('totp secret verifies current code and rejects garbage', () {
+    final secret = newTotpSecret();
+    final code = totpCode(secret);
+    expect(totpVerify(secret, code), isTrue);
+    expect(totpVerify(secret, '000000'), isFalse);
+  });
+
+  test('solid color photo is not treated as a car', () {
+    final image = img.Image(width: 64, height: 64);
+    img.fill(image, color: img.ColorRgb8(180, 200, 230));
+    final bytes = Uint8List.fromList(img.encodePng(image));
+    expect(looksLikeVehicle(bytes), isFalse);
   });
 
   test('achievements unlock german trio and first spot', () {

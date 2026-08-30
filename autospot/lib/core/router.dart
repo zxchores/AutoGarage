@@ -11,7 +11,8 @@ import '../ui/garage_screen.dart';
 import '../ui/home_shell.dart';
 import '../ui/leaderboard_screen.dart';
 import '../ui/map_screen.dart';
-import '../ui/onboarding_screen.dart';
+import '../ui/auth_screen.dart';
+import '../ui/dex_screen.dart';
 import '../ui/profile_screen.dart';
 import '../ui/result_screen.dart';
 import '../ui/settings_screen.dart';
@@ -44,7 +45,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/dex',
+        builder: (context, state) => const DexScreen(),
       ),
       GoRoute(
         path: '/result',

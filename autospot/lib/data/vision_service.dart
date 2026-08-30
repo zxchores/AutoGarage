@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -13,10 +14,10 @@ You are an automotive identification engine for a car-spotting game.
 Look at the photo and return STRICT JSON only, no markdown.
 
 Rules:
-- Identify the most prominent car. Ignore people, shops, plates, faces.
+- Identify the most prominent production car. Ignore people, shops, plates, faces.
 - Never transcribe license plates or personal data. Set visible_license_plate true/false only.
-- If it is not a car, set is_car=false and empty strings.
-- If unsure, still guess make/model but set confidence to "low".
+- If there is NO clearly visible car (street, sky, room, wall, person, bike, interior only), set is_car=false and empty strings. Do not guess.
+- If a car is visible, identify make and model. If unsure, still guess make/model but set confidence to "low".
 - Do not invent horsepower, 0-100 or market price. Those are filled by our catalog.
 - Tuning must be based only on what is visible.
 - make and model MUST match a production car.
@@ -124,6 +125,57 @@ String _guessColor(double r, double g, double b) {
 
 String photoHashOf(Uint8List bytes) => sha256.convert(bytes).toString();
 
+bool looksLikeVehicle(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return false;
+  const step = 12;
+  var n = 0;
+  var sum = 0.0;
+  var sumSq = 0.0;
+  var sky = 0;
+  var midContrast = 0;
+  final midTop = (decoded.height * 0.25).toInt();
+  final midBot = (decoded.height * 0.85).toInt();
+  for (var y = 0; y < decoded.height; y += step) {
+    for (var x = 0; x < decoded.width; x += step) {
+      final p = decoded.getPixel(x, y);
+      final r = p.r.toInt();
+      final g = p.g.toInt();
+      final b = p.b.toInt();
+      final lum = (r + g + b) / 3;
+      sum += lum;
+      sumSq += lum * lum;
+      n++;
+      final isSky = y < decoded.height * 0.45 && b >= r && b >= g && lum > 140;
+      if (isSky) sky++;
+      if (y >= midTop && y <= midBot) {
+        if (x + step < decoded.width) {
+          final nxp = decoded.getPixel(x + step, y);
+          final d = (lum - (nxp.r + nxp.g + nxp.b) / 3).abs();
+          if (d > 18) midContrast++;
+        }
+      }
+    }
+  }
+  if (n < 8) return false;
+  final mean = sum / n;
+  final variance = (sumSq / n) - mean * mean;
+  final stddev = variance <= 0 ? 0.0 : math.sqrt(variance);
+  if (stddev < 12) return false;
+  if (sky / n > 0.62 && stddev < 28) return false;
+  return midContrast > 6 || stddev > 22;
+}
+
+String? resolveVisionKey(String? stored) {
+  final local = stored?.trim();
+  if (local != null && local.isNotEmpty) return local;
+  const gemini = String.fromEnvironment('GEMINI_API_KEY');
+  if (gemini.trim().isNotEmpty) return gemini.trim();
+  const openai = String.fromEnvironment('OPENAI_API_KEY');
+  if (openai.trim().isNotEmpty) return openai.trim();
+  return null;
+}
+
 class VisionService {
   VisionService({http.Client? client}) : _client = client ?? http.Client();
 
@@ -133,16 +185,25 @@ class VisionService {
     required Uint8List photoBytes,
     required String? apiKey,
     required List<GarageCar> garage,
+    required bool huntMatch,
   }) async {
     final hash = photoHashOf(photoBytes);
     final analysis = analyzePhoto(photoBytes);
-    final key = apiKey?.trim();
-    if (key != null && key.isNotEmpty) {
+    final key = resolveVisionKey(apiKey);
+
+    if (key != null) {
       try {
         final extraction = key.startsWith('sk-')
             ? await _openAi(photoBytes, key)
             : await _gemini(photoBytes, key);
-        final spec = matchCatalog(extraction.make, extraction.model);
+        if (!extraction.isCar) {
+          throw NoCarFoundException();
+        }
+        if (extraction.make.trim().isEmpty || extraction.model.trim().isEmpty) {
+          throw RecognitionFailedException();
+        }
+        final spec =
+            matchCatalog(extraction.make, extraction.model) ?? fallbackSpec(extraction);
         return buildIdentifiedSpot(
           extraction: extraction,
           spec: spec,
@@ -151,38 +212,22 @@ class VisionService {
           photoHints: analysis.hints,
           garage: garage,
           fromAi: true,
-          needsCatalogPick: spec == null,
-          huntMatch: false,
+          needsCatalogPick: false,
+          huntMatch: huntMatch,
         );
+      } on NoCarFoundException {
+        rethrow;
+      } on RecognitionFailedException {
+        rethrow;
       } catch (_) {
-        // fall through to catalog pick — never invent a random car
+        // fall through to local presence check
       }
     }
-    return buildIdentifiedSpot(
-      extraction: VisionExtraction(
-        isCar: true,
-        make: '',
-        model: '',
-        generation: '',
-        yearFrom: 0,
-        yearTo: 0,
-        color: analysis.color,
-        bodyType: '',
-        confidence: Confidence.low,
-        condition: CarCondition.good,
-        tuning: const TuningFlags(),
-        photoQuality: analysis.quality,
-        notes: 'Выбери модель из базы. ИИ не подставляем наугад.',
-      ),
-      spec: null,
-      photoBytes: photoBytes,
-      photoHash: hash,
-      photoHints: analysis.hints,
-      garage: garage,
-      fromAi: false,
-      needsCatalogPick: true,
-      huntMatch: false,
-    );
+
+    if (!looksLikeVehicle(photoBytes)) {
+      throw NoCarFoundException();
+    }
+    throw RecognitionFailedException();
   }
 
   Future<VisionExtraction> _gemini(Uint8List bytes, String key) async {

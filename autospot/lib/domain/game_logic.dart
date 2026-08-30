@@ -332,3 +332,14 @@ class DuplicatePhotoException implements Exception {
   @override
   String toString() => 'Это фото уже было в гараже';
 }
+
+class NoCarFoundException implements Exception {
+  @override
+  String toString() => 'Не вижу машины рядом. Наведи камеру на авто целиком.';
+}
+
+class RecognitionFailedException implements Exception {
+  @override
+  String toString() =>
+      'Вижу авто, но модель не прочитал. Нужен интернет и ключ ИИ в настройках.';
+}

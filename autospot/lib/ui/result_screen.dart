@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/formatters.dart';
 import '../core/theme.dart';
-import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
 import '../state/app_controller.dart';
 import 'spot_screen.dart';
@@ -24,7 +23,7 @@ class ResultScreen extends ConsumerStatefulWidget {
 class _ResultScreenState extends ConsumerState<ResultScreen>
     with TickerProviderStateMixin {
   late IdentifiedSpot _spot;
-  var _phase = 0; // 0 scan, 1 pick, 2 reveal, 3 card
+  var _phase = 0; // 0 scan, 1 reveal, 2 card
   var _busy = false;
   late final AnimationController _scan;
   late final AnimationController _reveal;
@@ -53,17 +52,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
       setState(() => _scanLine = lines[i]);
     }
     if (!mounted) return;
-    if (_spot.needsCatalogPick || _spot.spec == null) {
-      setState(() => _phase = 1);
-    } else {
-      _startReveal();
-    }
+    _startReveal();
   }
 
   void _startReveal() {
-    setState(() => _phase = 2);
+    setState(() => _phase = 1);
     _reveal.forward(from: 0).whenComplete(() {
-      if (mounted) setState(() => _phase = 3);
+      if (mounted) setState(() => _phase = 2);
     });
   }
 
@@ -77,8 +72,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
   @override
   Widget build(BuildContext context) {
     if (_phase == 0) return _scanView();
-    if (_phase == 1) return _picker();
-    if (_phase == 2) return _revealView();
+    if (_phase == 1) return _revealView();
     return _card();
   }
 
@@ -122,93 +116,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                   color: Colors.white,
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _picker() {
-    final query = ValueNotifier('');
-    return Scaffold(
-      appBar: AppBar(title: const Text('Выбери из базы')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Марка или модель',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (v) => query.value = v,
-            ),
-          ),
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: query,
-              builder: (context, q, _) {
-                final needle = q.toLowerCase();
-                final items = carCatalog.where((c) {
-                  return needle.isEmpty ||
-                      c.title.toLowerCase().contains(needle) ||
-                      c.id.contains(needle);
-                }).toList();
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.82,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final spec = items[i];
-                    return GlassCard(
-                      padding: EdgeInsets.zero,
-                      onTap: () {
-                        _spot = ref.read(appProvider.notifier).pickModel(_spot, spec);
-                        _startReveal();
-                      },
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(22),
-                            ),
-                            child: CatalogThumb(spec: spec),
-                          )),
-                          Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                RarityBadge(rarity: spec.rarity, compact: true),
-                                const SizedBox(height: 4),
-                                Text(spec.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w800)),
-                                Text(
-                                  compact(spec.priceRub),
-                                  style: const TextStyle(
-                                    color: AppColors.mute,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
             ),
           ),
         ],
@@ -353,11 +260,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => setState(() => _phase = 1),
-                  child: const Text('Это не та модель'),
-                ),
+                const SizedBox(height: 16),
                 OrangeButton(
                   label: 'В гараж',
                   icon: Icons.garage_rounded,

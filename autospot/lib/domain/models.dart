@@ -270,6 +270,7 @@ class UserProfile {
     required this.city,
     required this.xp,
     required this.createdAt,
+    this.login = '',
   });
 
   final String id;
@@ -277,11 +278,13 @@ class UserProfile {
   final String city;
   final int xp;
   final DateTime createdAt;
+  final String login;
 
   UserProfile copyWith({
     String? name,
     String? city,
     int? xp,
+    String? login,
   }) =>
       UserProfile(
         id: id,
@@ -289,6 +292,7 @@ class UserProfile {
         city: city ?? this.city,
         xp: xp ?? this.xp,
         createdAt: createdAt,
+        login: login ?? this.login,
       );
 
   Map<String, dynamic> toJson() => {
@@ -297,6 +301,7 @@ class UserProfile {
         'city': city,
         'xp': xp,
         'createdAt': createdAt.toIso8601String(),
+        'login': login,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -306,6 +311,7 @@ class UserProfile {
         xp: json['xp'] as int? ?? 0,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),
+        login: json['login'] as String? ?? '',
       );
 }
 
@@ -488,5 +494,8 @@ class IdentifiedSpot {
 
   String get make => spec?.make ?? extraction.make;
   String get model => spec?.model ?? extraction.model;
-  String get title => spec == null ? 'Выбери модель' : '$make $model';
+  String get title {
+    final text = '$make $model'.trim();
+    return text.isEmpty ? 'Авто' : text;
+  }
 }

@@ -31,6 +31,11 @@ class ProfileScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(profile.name, style: Theme.of(context).textTheme.titleLarge),
+                if (profile.login.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('@${profile.login}',
+                      style: const TextStyle(color: AppColors.mute)),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   '${level.title}  •  ур. ${level.level}',
@@ -60,6 +65,19 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+          GlassCard(
+            onTap: () => context.push('/dex'),
+            child: const Row(
+              children: [
+                Expanded(
+                  child: Text('База машин',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+                Icon(Icons.chevron_right, color: AppColors.mute),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           GlassCard(
             onTap: () => context.push('/collections'),
             child: const Row(

@@ -13,9 +13,9 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: AutoSpotApp()));
     for (var i = 0; i < 15; i++) {
       await tester.pump(const Duration(milliseconds: 20));
-      if (find.text('Дальше').evaluate().isNotEmpty) break;
+      if (find.text('Регистрация').evaluate().isNotEmpty) break;
     }
     expect(find.textContaining('AUTOSPOT'), findsOneWidget);
-    expect(find.text('Дальше'), findsOneWidget);
+    expect(find.text('Регистрация'), findsWidgets);
   });
 }

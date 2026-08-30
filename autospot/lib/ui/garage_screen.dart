@@ -35,6 +35,10 @@ class GarageScreen extends ConsumerWidget {
                         icon: const Icon(Icons.map_outlined),
                       ),
                       IconButton(
+                        onPressed: () => context.push('/dex'),
+                        icon: const Icon(Icons.grid_view_rounded),
+                      ),
+                      IconButton(
                         onPressed: () => context.push('/collections'),
                         icon: const Icon(Icons.collections_bookmark_outlined),
                       ),
