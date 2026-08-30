@@ -341,5 +341,5 @@ class NoCarFoundException implements Exception {
 class RecognitionFailedException implements Exception {
   @override
   String toString() =>
-      'Вижу авто, но модель не прочитал. Нужен интернет и ключ ИИ в настройках.';
+      'Вижу авто, но модель не прочитал. Проверь интернет и сними ещё раз.';
 }

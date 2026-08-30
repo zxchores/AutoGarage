@@ -141,6 +141,16 @@ void main() {
     expect(german.progress(garage), 3);
   });
 
+  test('vision reply parser reads fenced JSON and plain titles', () {
+    final fenced = parseVisionReply(
+      '```json\n{"is_car":true,"make":"BMW","model":"M3"}\n```',
+    );
+    expect(fenced.isCar, isTrue);
+    expect(fenced.make, 'BMW');
+    expect(parseVisionReply('BMW M3').make, 'BMW');
+    expect(parseVisionReply('no car in this photo').isCar, isFalse);
+  });
+
   test('vision JSON without a car stays is_car false', () {
     const raw = '''
     {"is_car": false, "make": "", "model": "", "generation": "", "year_from": 0, "year_to": 0,

@@ -110,7 +110,7 @@ class ProfileScreen extends ConsumerWidget {
             child: const Row(
               children: [
                 Expanded(
-                  child: Text('Настройки и API-ключ',
+                  child: Text('Настройки',
                       style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
                 Icon(Icons.chevron_right, color: AppColors.mute),

@@ -68,10 +68,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
           const SizedBox(height: 24),
-          const Text('Vision API', style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text('Распознавание', style: TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           const Text(
-            'Ключ Gemini (AI Studio) или OpenAI (начинается с sk-). Хранится только на этом устройстве. Для магазина ключ лучше вынести в Cloud Functions.',
+            'ИИ уже встроен и работает онлайн сам. Свой ключ Gemini или OpenAI можно добавить, если хочешь запасной канал.',
             style: TextStyle(color: AppColors.mute, fontSize: 13, height: 1.35),
           ),
           const SizedBox(height: 8),

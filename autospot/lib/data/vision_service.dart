@@ -166,6 +166,19 @@ bool looksLikeVehicle(Uint8List bytes) {
   return midContrast > 6 || stddev > 22;
 }
 
+const _spacePrompt = '''
+Look at the photo and return STRICT JSON only, no markdown, no extra text.
+If a production car is clearly visible:
+{"is_car":true,"make":"Toyota","model":"Camry","generation":"","year_from":0,"year_to":0,"body_type":"sedan","color":"white","confidence":"medium","condition":"good","tuning":{},"photo_quality":"average","visible_license_plate":false,"notes":""}
+If there is NO clearly visible car (sky, room, person, wall, empty street):
+{"is_car":false,"make":"","model":""}
+Do not invent a car. Do not copy example values unless they match the photo.
+''';
+
+const _builtInSpaces = <String>[
+  'maziyarpanahi-qwen2-vl-2b.hf.space',
+];
+
 String? resolveVisionKey(String? stored) {
   final local = stored?.trim();
   if (local != null && local.isNotEmpty) return local;
@@ -174,6 +187,39 @@ String? resolveVisionKey(String? stored) {
   const openai = String.fromEnvironment('OPENAI_API_KEY');
   if (openai.trim().isNotEmpty) return openai.trim();
   return null;
+}
+
+Uint8List compressForVision(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return bytes;
+  var work = decoded;
+  if (work.width > 768) {
+    work = img.copyResize(work, width: 768);
+  }
+  return Uint8List.fromList(img.encodeJpg(work, quality: 72));
+}
+
+bool isFlatFrame(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return true;
+  const step = 14;
+  var n = 0;
+  var sum = 0.0;
+  var sumSq = 0.0;
+  for (var y = 0; y < decoded.height; y += step) {
+    for (var x = 0; x < decoded.width; x += step) {
+      final p = decoded.getPixel(x, y);
+      final lum = (p.r + p.g + p.b) / 3;
+      sum += lum;
+      sumSq += lum * lum;
+      n++;
+    }
+  }
+  if (n < 8) return true;
+  final mean = sum / n;
+  final variance = (sumSq / n) - mean * mean;
+  final stddev = variance <= 0 ? 0.0 : math.sqrt(variance);
+  return stddev < 11;
 }
 
 class VisionService {
@@ -189,45 +235,157 @@ class VisionService {
   }) async {
     final hash = photoHashOf(photoBytes);
     final analysis = analyzePhoto(photoBytes);
+    if (isFlatFrame(photoBytes)) {
+      throw NoCarFoundException();
+    }
+
+    final compact = compressForVision(photoBytes);
     final key = resolveVisionKey(apiKey);
 
     if (key != null) {
       try {
-        final extraction = key.startsWith('sk-')
-            ? await _openAi(photoBytes, key)
-            : await _gemini(photoBytes, key);
-        if (!extraction.isCar) {
-          throw NoCarFoundException();
-        }
-        if (extraction.make.trim().isEmpty || extraction.model.trim().isEmpty) {
-          throw RecognitionFailedException();
-        }
-        final spec =
-            matchCatalog(extraction.make, extraction.model) ?? fallbackSpec(extraction);
-        return buildIdentifiedSpot(
-          extraction: extraction,
-          spec: spec,
+        return _spotFromExtraction(
+          extraction: key.startsWith('sk-')
+              ? await _openAi(compact, key)
+              : await _gemini(compact, key),
           photoBytes: photoBytes,
-          photoHash: hash,
-          photoHints: analysis.hints,
+          hash: hash,
+          analysis: analysis,
           garage: garage,
-          fromAi: true,
-          needsCatalogPick: false,
           huntMatch: huntMatch,
         );
       } on NoCarFoundException {
         rethrow;
       } on RecognitionFailedException {
         rethrow;
-      } catch (_) {
-        // fall through to local presence check
-      }
+      } catch (_) {}
+    }
+
+    for (final host in _builtInSpaces) {
+      try {
+        return _spotFromExtraction(
+          extraction: await _huggingFaceSpace(compact, host),
+          photoBytes: photoBytes,
+          hash: hash,
+          analysis: analysis,
+          garage: garage,
+          huntMatch: huntMatch,
+        );
+      } on NoCarFoundException {
+        rethrow;
+      } on RecognitionFailedException {
+        rethrow;
+      } catch (_) {}
     }
 
     if (!looksLikeVehicle(photoBytes)) {
       throw NoCarFoundException();
     }
     throw RecognitionFailedException();
+  }
+
+  IdentifiedSpot _spotFromExtraction({
+    required VisionExtraction extraction,
+    required Uint8List photoBytes,
+    required String hash,
+    required PhotoAnalysis analysis,
+    required List<GarageCar> garage,
+    required bool huntMatch,
+  }) {
+    if (!extraction.isCar) {
+      throw NoCarFoundException();
+    }
+    if (extraction.make.trim().isEmpty || extraction.model.trim().isEmpty) {
+      throw RecognitionFailedException();
+    }
+    final spec =
+        matchCatalog(extraction.make, extraction.model) ?? fallbackSpec(extraction);
+    return buildIdentifiedSpot(
+      extraction: extraction,
+      spec: spec,
+      photoBytes: photoBytes,
+      photoHash: hash,
+      photoHints: analysis.hints,
+      garage: garage,
+      fromAi: true,
+      needsCatalogPick: false,
+      huntMatch: huntMatch,
+    );
+  }
+
+  Future<VisionExtraction> _huggingFaceSpace(Uint8List bytes, String host) async {
+    final upload = http.MultipartRequest(
+      'POST',
+      Uri.parse('https://$host/upload'),
+    );
+    upload.headers['User-Agent'] = 'AutoSpot/1.2';
+    upload.files.add(
+      http.MultipartFile.fromBytes('files', bytes, filename: 'spot.jpg'),
+    );
+    final uploaded = await http.Response.fromStream(
+      await _client.send(upload).timeout(const Duration(seconds: 40)),
+    );
+    if (uploaded.statusCode >= 400) {
+      throw Exception('upload ${uploaded.statusCode}');
+    }
+    final path = (jsonDecode(uploaded.body) as List).first as String;
+    final session =
+        DateTime.now().microsecondsSinceEpoch.toRadixString(16).padLeft(12, '0');
+    final join = await _client
+        .post(
+          Uri.parse('https://$host/queue/join'),
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'AutoSpot/1.2',
+          },
+          body: jsonEncode({
+            'fn_index': 0,
+            'session_hash': session,
+            'data': [
+              {
+                'path': path,
+                'orig_name': 'spot.jpg',
+                'mime_type': 'image/jpeg',
+                'meta': {'_type': 'gradio.FileData'},
+              },
+              _spacePrompt,
+            ],
+          }),
+        )
+        .timeout(const Duration(seconds: 40));
+    if (join.statusCode >= 400) {
+      throw Exception('join ${join.statusCode}');
+    }
+    final stream = await _client
+        .get(
+          Uri.parse('https://$host/queue/data?session_hash=$session'),
+          headers: {
+            'Accept': 'text/event-stream',
+            'User-Agent': 'AutoSpot/1.2',
+          },
+        )
+        .timeout(const Duration(seconds: 120));
+    if (stream.statusCode >= 400) {
+      throw Exception('queue ${stream.statusCode}');
+    }
+    String? answer;
+    for (final line in stream.body.split('\n')) {
+      if (!line.startsWith('data: ')) continue;
+      final payload = jsonDecode(line.substring(6));
+      if (payload is! Map) continue;
+      if (payload['msg'] != 'process_completed') continue;
+      if (payload['success'] != true) {
+        throw Exception('space failed');
+      }
+      final data = payload['output']?['data'];
+      if (data is List && data.isNotEmpty) {
+        answer = '${data.first}';
+      }
+    }
+    if (answer == null || answer.trim().isEmpty) {
+      throw Exception('empty vision reply');
+    }
+    return parseVisionReply(answer);
   }
 
   Future<VisionExtraction> _gemini(Uint8List bytes, String key) async {
@@ -300,6 +458,60 @@ class VisionService {
     final text = payload['choices'][0]['message']['content'] as String;
     return parseVisionJson(text);
   }
+}
+
+VisionExtraction parseVisionReply(String raw) {
+  final cleaned = raw.trim().replaceAll(RegExp(r'```json|```'), '').trim();
+  final start = cleaned.indexOf('{');
+  final end = cleaned.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try {
+      return parseVisionJson(cleaned.substring(start, end + 1));
+    } catch (_) {}
+  }
+  final lower = cleaned.toLowerCase();
+  if (RegExp(r'no car|not a car|нет машин|не вижу').hasMatch(lower)) {
+    return const VisionExtraction(
+      isCar: false,
+      make: '',
+      model: '',
+      generation: '',
+      yearFrom: 0,
+      yearTo: 0,
+      color: '',
+      bodyType: '',
+      confidence: Confidence.low,
+      condition: CarCondition.good,
+      tuning: TuningFlags(),
+      photoQuality: PhotoQuality.average,
+    );
+  }
+  final parts = cleaned
+      .replaceAll(RegExp(r'[^A-Za-z0-9А-Яа-яёЁ\- ]'), ' ')
+      .split(RegExp(r'\s+'))
+      .where((e) => e.isNotEmpty)
+      .toList();
+  if (parts.length >= 2) {
+    final guessed = matchCatalog(parts.first, parts.sublist(1).join(' '));
+    if (guessed != null) {
+      return VisionExtraction(
+        isCar: true,
+        make: guessed.make,
+        model: guessed.model,
+        generation: guessed.generation,
+        yearFrom: guessed.yearFrom,
+        yearTo: guessed.yearTo,
+        color: '',
+        bodyType: guessed.bodyType,
+        confidence: Confidence.low,
+        condition: CarCondition.good,
+        tuning: const TuningFlags(),
+        photoQuality: PhotoQuality.average,
+        notes: cleaned,
+      );
+    }
+  }
+  throw const FormatException('Непонятный ответ ИИ');
 }
 
 VisionExtraction parseVisionJson(String raw) {
