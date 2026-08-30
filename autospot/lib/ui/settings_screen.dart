@@ -99,6 +99,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 28),
           const Text('Аккаунт', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text(
+            'Логин и пароль живут только на этом телефоне, не на сервере. Пароль хранится хешем, не открытым текстом. В рейтинг города уходит только ник, город и XP.',
+            style: TextStyle(color: AppColors.mute, fontSize: 13, height: 1.35),
+          ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () async {

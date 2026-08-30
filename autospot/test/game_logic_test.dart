@@ -220,6 +220,20 @@ void main() {
     expect(totpVerify(secret, '000000'), isFalse);
   });
 
+  test('space stream keeps the last model answer', () {
+    const raw = '''
+event: generating
+data: [""]
+
+event: generating
+data: ["{\\"is_car\\":true,\\"make\\":\\"BMW\\",\\"model\\":\\"3 Series\\"}"]
+
+event: complete
+data: ["{\\"is_car\\":true,\\"make\\":\\"BMW\\",\\"model\\":\\"3 Series\\"}"]
+''';
+    expect(parseSpaceStream(raw), contains('BMW'));
+  });
+
   test('solid color photo is not treated as a car', () {
     final image = img.Image(width: 64, height: 64);
     img.fill(image, color: img.ColorRgb8(180, 200, 230));

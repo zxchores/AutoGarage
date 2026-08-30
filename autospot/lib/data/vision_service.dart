@@ -62,9 +62,6 @@ class PhotoAnalysis {
 }
 
 PhotoAnalysis analyzePhoto(Uint8List bytes) {
-  final hints = <String>[];
-  var quality = PhotoQuality.average;
-  var color = '';
   final decoded = img.decodeImage(bytes);
   if (decoded == null) {
     return const PhotoAnalysis(
@@ -73,6 +70,13 @@ PhotoAnalysis analyzePhoto(Uint8List bytes) {
       color: '',
     );
   }
+  return _analyzeDecoded(decoded);
+}
+
+PhotoAnalysis _analyzeDecoded(img.Image decoded) {
+  final hints = <String>[];
+  var quality = PhotoQuality.average;
+  var color = '';
   final minSide = decoded.width < decoded.height ? decoded.width : decoded.height;
   if (minSide < 480) {
     quality = PhotoQuality.poor;
@@ -128,6 +132,10 @@ String photoHashOf(Uint8List bytes) => sha256.convert(bytes).toString();
 bool looksLikeVehicle(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) return false;
+  return _looksLikeVehicleDecoded(decoded);
+}
+
+bool _looksLikeVehicleDecoded(img.Image decoded) {
   const step = 12;
   var n = 0;
   var sum = 0.0;
@@ -192,16 +200,26 @@ String? resolveVisionKey(String? stored) {
 Uint8List compressForVision(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) return bytes;
+  return _jpegForVision(decoded);
+}
+
+Uint8List _jpegForVision(img.Image decoded) {
   var work = decoded;
-  if (work.width > 768) {
-    work = img.copyResize(work, width: 768);
+  if (work.width > 512) {
+    work = img.copyResize(work, width: 512);
+  } else if (work.height > 720) {
+    work = img.copyResize(work, height: 720);
   }
-  return Uint8List.fromList(img.encodeJpg(work, quality: 72));
+  return Uint8List.fromList(img.encodeJpg(work, quality: 58));
 }
 
 bool isFlatFrame(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) return true;
+  return _isFlatDecoded(decoded);
+}
+
+bool _isFlatDecoded(img.Image decoded) {
   const step = 14;
   var n = 0;
   var sum = 0.0;
@@ -234,12 +252,19 @@ class VisionService {
     required bool huntMatch,
   }) async {
     final hash = photoHashOf(photoBytes);
-    final analysis = analyzePhoto(photoBytes);
-    if (isFlatFrame(photoBytes)) {
+    var decoded = img.decodeImage(photoBytes);
+    if (decoded == null) {
+      throw NoCarFoundException();
+    }
+    if (decoded.width > 960) {
+      decoded = img.copyResize(decoded, width: 960);
+    }
+    final analysis = _analyzeDecoded(decoded);
+    if (_isFlatDecoded(decoded)) {
       throw NoCarFoundException();
     }
 
-    final compact = compressForVision(photoBytes);
+    final compact = _jpegForVision(decoded);
     final key = resolveVisionKey(apiKey);
 
     if (key != null) {
@@ -278,7 +303,7 @@ class VisionService {
       } catch (_) {}
     }
 
-    if (!looksLikeVehicle(photoBytes)) {
+    if (!_looksLikeVehicleDecoded(decoded)) {
       throw NoCarFoundException();
     }
     throw RecognitionFailedException();
@@ -318,70 +343,55 @@ class VisionService {
       'POST',
       Uri.parse('https://$host/upload'),
     );
-    upload.headers['User-Agent'] = 'AutoSpot/1.2';
+    upload.headers['User-Agent'] = 'AutoSpot/1.3';
     upload.files.add(
       http.MultipartFile.fromBytes('files', bytes, filename: 'spot.jpg'),
     );
     final uploaded = await http.Response.fromStream(
-      await _client.send(upload).timeout(const Duration(seconds: 40)),
+      await _client.send(upload).timeout(const Duration(seconds: 12)),
     );
     if (uploaded.statusCode >= 400) {
       throw Exception('upload ${uploaded.statusCode}');
     }
     final path = (jsonDecode(uploaded.body) as List).first as String;
-    final session =
-        DateTime.now().microsecondsSinceEpoch.toRadixString(16).padLeft(12, '0');
-    final join = await _client
+    final file = {
+      'path': path,
+      'orig_name': 'spot.jpg',
+      'mime_type': 'image/jpeg',
+      'meta': {'_type': 'gradio.FileData'},
+    };
+    final call = await _client
         .post(
-          Uri.parse('https://$host/queue/join'),
+          Uri.parse('https://$host/call/qwen_inference'),
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'AutoSpot/1.2',
+            'User-Agent': 'AutoSpot/1.3',
           },
           body: jsonEncode({
-            'fn_index': 0,
-            'session_hash': session,
-            'data': [
-              {
-                'path': path,
-                'orig_name': 'spot.jpg',
-                'mime_type': 'image/jpeg',
-                'meta': {'_type': 'gradio.FileData'},
-              },
-              _spacePrompt,
-            ],
+            'data': [file, _spacePrompt],
           }),
         )
-        .timeout(const Duration(seconds: 40));
-    if (join.statusCode >= 400) {
-      throw Exception('join ${join.statusCode}');
+        .timeout(const Duration(seconds: 10));
+    if (call.statusCode >= 400) {
+      throw Exception('call ${call.statusCode}');
+    }
+    final eventId = '${jsonDecode(call.body)['event_id'] ?? ''}';
+    if (eventId.isEmpty) {
+      throw Exception('no event');
     }
     final stream = await _client
         .get(
-          Uri.parse('https://$host/queue/data?session_hash=$session'),
+          Uri.parse('https://$host/call/qwen_inference/$eventId'),
           headers: {
             'Accept': 'text/event-stream',
-            'User-Agent': 'AutoSpot/1.2',
+            'User-Agent': 'AutoSpot/1.3',
           },
         )
-        .timeout(const Duration(seconds: 120));
+        .timeout(const Duration(seconds: 22));
     if (stream.statusCode >= 400) {
-      throw Exception('queue ${stream.statusCode}');
+      throw Exception('stream ${stream.statusCode}');
     }
-    String? answer;
-    for (final line in stream.body.split('\n')) {
-      if (!line.startsWith('data: ')) continue;
-      final payload = jsonDecode(line.substring(6));
-      if (payload is! Map) continue;
-      if (payload['msg'] != 'process_completed') continue;
-      if (payload['success'] != true) {
-        throw Exception('space failed');
-      }
-      final data = payload['output']?['data'];
-      if (data is List && data.isNotEmpty) {
-        answer = '${data.first}';
-      }
-    }
+    final answer = parseSpaceStream(stream.body);
     if (answer == null || answer.trim().isEmpty) {
       throw Exception('empty vision reply');
     }
@@ -458,6 +468,32 @@ class VisionService {
     final text = payload['choices'][0]['message']['content'] as String;
     return parseVisionJson(text);
   }
+}
+
+String? parseSpaceStream(String raw) {
+  String? last;
+  for (final line in raw.split('\n')) {
+    if (!line.startsWith('data: ')) continue;
+    final chunk = line.substring(6).trim();
+    if (chunk.isEmpty || chunk == 'null') continue;
+    try {
+      final payload = jsonDecode(chunk);
+      if (payload is List && payload.isNotEmpty) {
+        final text = '${payload.first}'.trim();
+        if (text.isNotEmpty) last = text;
+        continue;
+      }
+      if (payload is Map) {
+        if (payload['success'] == false) continue;
+        final data = payload['output']?['data'];
+        if (data is List && data.isNotEmpty) {
+          final text = '${data.first}'.trim();
+          if (text.isNotEmpty) last = text;
+        }
+      }
+    } catch (_) {}
+  }
+  return last;
 }
 
 VisionExtraction parseVisionReply(String raw) {
