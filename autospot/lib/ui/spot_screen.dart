@@ -70,7 +70,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
       );
       final controller = CameraController(
         rear,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
       );
       await controller.initialize();
@@ -211,7 +211,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
-                  child: Text('Определяю модель… обычно 5–8 сек',
+                  child: Text('Считываю марку и модель…',
                       style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               Padding(

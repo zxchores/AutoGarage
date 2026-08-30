@@ -73,6 +73,17 @@ void main() {
     expect(matchCatalog('gelly', 'Coolray')?.make, 'Geely');
     expect(matchCatalog('cadilac', 'XT5')?.make, 'Cadillac');
     expect(matchCatalog('mitshubishi', 'Outlander')?.id, 'mitsubishi_outlander');
+    expect(matchCatalog('BMW', '320i')?.id, 'bmw_3');
+    expect(matchCatalog('BMW', '3 Series')?.id, 'bmw_3');
+    expect(matchCatalog('BMW', 'X5 M')?.model, contains('X5 M'));
+    expect(matchCatalog('BMW', 'X5')?.id, 'bmw_x5');
+    expect(matchCatalog('Mercedes', 'C200')?.id, 'mercedes_c');
+    expect(matchCatalog('VW', 'Golf GTI')?.id, 'vw_golf_gti');
+    expect(matchCatalog('VW', 'Golf')?.id, 'vw_golf');
+    expect(matchCatalog('Toyota', 'Land Cruiser Prado')?.model, contains('Prado'));
+    expect(matchCatalog('Toyota', 'Land Cruiser')?.model, 'Land Cruiser');
+    expect(matchCatalog('', 'Toyota Camry')?.model, 'Camry');
+    expect(matchCatalog('Lada', 'Vesta SW Cross')?.id, 'lada_vestasw_cross');
   });
 
   test('street catalog covers requested brands', () {

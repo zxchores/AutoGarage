@@ -10,43 +10,23 @@ import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
 
 const visionPrompt = '''
-You are an automotive identification engine for a car-spotting game.
-Look at the photo and return STRICT JSON only, no markdown.
+You identify street cars for a spotting game. Return STRICT JSON only.
 
-Rules:
-- Identify the most prominent production car. Ignore people, shops, plates, faces.
-- Never transcribe license plates or personal data. Set visible_license_plate true/false only.
-- If there is NO clearly visible car (street, sky, room, wall, person, bike, interior only), set is_car=false and empty strings. Do not guess.
-- If a car is visible, identify make and model. If unsure, still guess make/model but set confidence to "low".
-- Do not invent horsepower, 0-100 or market price. Those are filled by our catalog.
-- Tuning must be based only on what is visible.
-- make and model MUST match a production car.
+Look at badges, grille, headlights, tail lights, proportions and body.
+Ignore people, shops, plates, interiors. Never transcribe a plate.
 
-JSON schema:
-{
-  "is_car": true,
-  "make": "BMW",
-  "model": "M3",
-  "generation": "G80",
-  "year_from": 2021,
-  "year_to": 2024,
-  "body_type": "sedan",
-  "color": "green",
-  "confidence": "low|medium|high",
-  "condition": "excellent|good|damaged|restoration|corrosion",
-  "tuning": {
-    "bodykit": false,
-    "wheels": false,
-    "spoiler": false,
-    "vinyl": false,
-    "exhaust": false,
-    "lowered": false,
-    "details": []
-  },
-  "photo_quality": "poor|average|good|excellent",
-  "visible_license_plate": false,
-  "notes": "short visual notes"
-}
+If a production car is clearly visible:
+- make: official English brand (BMW, Mercedes-Benz, Volkswagen, Toyota, Lada, Chery, Geely, Haval, Kia, Hyundai, Skoda, Audi)
+- model: official model name, not a body type. Examples of FORM not answers: C-Class, 3 Series, Tiggo 7 Pro.
+- If a performance badge is readable (M3, M5, GTI, R, RS6, AMG, Type R, WRX), keep that exact model, not the base car.
+- generation: factory code if you know it (G20, W206, B9), else "".
+- color: simple color word.
+If unsure, still name the closest real make/model and set confidence to "low".
+If there is NO car (sky, room, wall, person, empty street, bike only):
+{"is_car":false,"make":"","model":""}
+
+JSON:
+{"is_car":true,"make":"","model":"","generation":"","year_from":0,"year_to":0,"body_type":"","color":"","confidence":"low|medium|high","condition":"good","tuning":{"bodykit":false,"wheels":false,"spoiler":false,"vinyl":false,"exhaust":false,"lowered":false,"details":[]},"photo_quality":"average","visible_license_plate":false,"notes":""}
 ''';
 
 class PhotoAnalysis {
@@ -175,12 +155,15 @@ bool _looksLikeVehicleDecoded(img.Image decoded) {
 }
 
 const _spacePrompt = '''
-Look at the photo and return STRICT JSON only, no markdown, no extra text.
-If a production car is clearly visible:
-{"is_car":true,"make":"Toyota","model":"Camry","generation":"","year_from":0,"year_to":0,"body_type":"sedan","color":"white","confidence":"medium","condition":"good","tuning":{},"photo_quality":"average","visible_license_plate":false,"notes":""}
-If there is NO clearly visible car (sky, room, person, wall, empty street):
-{"is_car":false,"make":"","model":""}
-Do not invent a car. Do not copy example values unless they match the photo.
+Identify the main production car from badges, grille, lights and body. STRICT JSON only.
+{"is_car":true,"make":"","model":"","generation":"","body_type":"","color":"","confidence":"medium"}
+Rules:
+- make and model must be real official names in English.
+- model is the nameplate, never SUV/sedan/crossover.
+- Keep performance badges: M3, GTI, RS6, AMG, Type R, WRX.
+- Street cars in Russia/CIS are common: Lada, Haval, Geely, Chery, Changan, Exeed, Tank, Kia, Hyundai, Skoda, VW, Toyota, BMW, Mercedes-Benz.
+- No car in the photo => {"is_car":false,"make":"","model":""}
+- Do not invent a car. Fill make and model from THIS photo only.
 ''';
 
 const _builtInSpaces = <String>[
@@ -203,14 +186,24 @@ Uint8List compressForVision(Uint8List bytes) {
   return _jpegForVision(decoded);
 }
 
+img.Image focusCar(img.Image src) {
+  if (src.width < 640 || src.height < 480) return src;
+  final x = (src.width * 0.06).round();
+  final y = (src.height * 0.14).round();
+  final w = (src.width * 0.88).round();
+  final h = (src.height * 0.66).round();
+  if (w < 200 || h < 160) return src;
+  return img.copyCrop(src, x: x, y: y, width: w, height: h);
+}
+
 Uint8List _jpegForVision(img.Image decoded) {
   var work = decoded;
-  if (work.width > 512) {
-    work = img.copyResize(work, width: 512);
-  } else if (work.height > 720) {
-    work = img.copyResize(work, height: 720);
+  if (work.width > 768) {
+    work = img.copyResize(work, width: 768);
+  } else if (work.height > 960) {
+    work = img.copyResize(work, height: 960);
   }
-  return Uint8List.fromList(img.encodeJpg(work, quality: 58));
+  return Uint8List.fromList(img.encodeJpg(work, quality: 74));
 }
 
 bool isFlatFrame(Uint8List bytes) {
@@ -256,9 +249,10 @@ class VisionService {
     if (decoded == null) {
       throw NoCarFoundException();
     }
-    if (decoded.width > 960) {
-      decoded = img.copyResize(decoded, width: 960);
+    if (decoded.width > 1600) {
+      decoded = img.copyResize(decoded, width: 1600);
     }
+    decoded = focusCar(decoded);
     final analysis = _analyzeDecoded(decoded);
     if (_isFlatDecoded(decoded)) {
       throw NoCarFoundException();
@@ -320,13 +314,36 @@ class VisionService {
     if (!extraction.isCar) {
       throw NoCarFoundException();
     }
-    if (extraction.make.trim().isEmpty || extraction.model.trim().isEmpty) {
+    if (extraction.make.trim().isEmpty && extraction.model.trim().isEmpty) {
       throw RecognitionFailedException();
     }
-    final spec =
-        matchCatalog(extraction.make, extraction.model) ?? fallbackSpec(extraction);
+    final resolved = extraction.color.trim().isEmpty && analysis.color.isNotEmpty
+        ? VisionExtraction(
+            isCar: extraction.isCar,
+            make: extraction.make,
+            model: extraction.model,
+            generation: extraction.generation,
+            yearFrom: extraction.yearFrom,
+            yearTo: extraction.yearTo,
+            color: analysis.color,
+            bodyType: extraction.bodyType,
+            confidence: extraction.confidence,
+            condition: extraction.condition,
+            tuning: extraction.tuning,
+            photoQuality: extraction.photoQuality,
+            notes: extraction.notes,
+          )
+        : extraction;
+    final spec = matchCatalog(
+          resolved.make,
+          resolved.model,
+          generation: resolved.generation,
+          bodyType: resolved.bodyType,
+        ) ??
+        matchCatalog('', '${resolved.make} ${resolved.model}'.trim()) ??
+        fallbackSpec(resolved);
     return buildIdentifiedSpot(
-      extraction: extraction,
+      extraction: resolved,
       spec: spec,
       photoBytes: photoBytes,
       photoHash: hash,
