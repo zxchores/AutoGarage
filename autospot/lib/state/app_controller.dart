@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/city.dart';
 import '../data/app_permissions.dart';
 import '../data/auth.dart';
+import '../data/city_board.dart';
 import '../data/local_store.dart';
 import '../data/location_service.dart';
 import '../data/vision_service.dart';
@@ -16,6 +18,7 @@ final localStoreProvider = Provider<LocalStore>((ref) => LocalStore());
 final visionServiceProvider = Provider<VisionService>((ref) => VisionService());
 final locationServiceProvider =
     Provider<LocationService>((ref) => LocationService());
+final cityBoardProvider = Provider<CityBoard>((ref) => CityBoard());
 
 final appProvider =
     NotifierProvider<AppController, AppSnapshot>(AppController.new);
@@ -69,6 +72,7 @@ class AppController extends Notifier<AppSnapshot> {
       throw AuthException('Пароль минимум 6 символов');
     }
     final nick = name.trim().isEmpty ? normalized : name.trim();
+    final hometown = cityLabel(city);
     final accounts = await _store.loadAccounts();
     if (accounts.any((a) => a.login == normalized)) {
       throw AuthException('Такой логин уже занят');
@@ -81,7 +85,7 @@ class AppController extends Notifier<AppSnapshot> {
       passwordHash: hashPassword(password, salt),
       totpSecret: newTotpSecret(),
       name: nick,
-      city: city.trim(),
+      city: hometown,
       createdAt: DateTime.now(),
     );
     _pendingAccount = account;
@@ -124,6 +128,7 @@ class AppController extends Notifier<AppSnapshot> {
       await _persist();
     }
     await AppPermissions.requestAll();
+    await publishPresence();
   }
 
   Future<void> startLogin({
@@ -158,6 +163,7 @@ class AppController extends Notifier<AppSnapshot> {
     _pendingLogin = null;
     await reload();
     await AppPermissions.requestAll();
+    await publishPresence();
   }
 
   Future<void> logout() async {
@@ -170,7 +176,10 @@ class AppController extends Notifier<AppSnapshot> {
   Future<void> updateProfile({String? name, String? city}) async {
     final profile = state.profile;
     if (profile == null) return;
-    final next = profile.copyWith(name: name, city: city);
+    final next = profile.copyWith(
+      name: name,
+      city: city == null ? profile.city : cityLabel(city),
+    );
     state = state.copyWith(
       profile: next,
       achievements: unlockedAchievements(
@@ -180,6 +189,45 @@ class AppController extends Notifier<AppSnapshot> {
       ),
     );
     await _persist();
+    await publishPresence();
+  }
+
+  Future<List<CityPlayer>> publishPresence() async {
+    final profile = state.profile;
+    if (profile == null || profile.city.trim().isEmpty) return const [];
+    final uniqueCars = state.garage
+        .map((c) => (c.catalogId ?? '${c.make}|${c.model}').toLowerCase())
+        .toSet()
+        .length;
+    return ref.read(cityBoardProvider).publish(
+          city: profile.city,
+          me: CityPlayer(
+            id: profile.id,
+            name: profile.name,
+            xp: profile.xp,
+            cars: uniqueCars,
+            lastSeen: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+        );
+  }
+
+  Future<List<CityPlayer>> cityPlayers() async {
+    final profile = state.profile;
+    if (profile == null || profile.city.trim().isEmpty) return const [];
+    final remote = await publishPresence();
+    if (remote.isNotEmpty) return remote;
+    return [
+      CityPlayer(
+        id: profile.id,
+        name: profile.name,
+        xp: profile.xp,
+        cars: state.garage
+            .map((c) => (c.catalogId ?? '${c.make}|${c.model}').toLowerCase())
+            .toSet()
+            .length,
+        lastSeen: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      ),
+    ];
   }
 
   Future<void> saveApiKey(String key) async {
@@ -232,7 +280,8 @@ class AppController extends Notifier<AppSnapshot> {
     if (profile == null) {
       throw StateError('Нет профиля');
     }
-    final city = (geo?.city.isNotEmpty == true) ? geo!.city : profile.city;
+    final rawCity = (geo?.city.isNotEmpty == true) ? geo!.city : profile.city;
+    final city = cityLabel(rawCity);
     final spec = spot.spec!;
     final extraction = spot.extraction;
     var resolved = spot;
@@ -300,6 +349,7 @@ class AppController extends Notifier<AppSnapshot> {
       clearError: true,
     );
     await _persist();
+    await publishPresence();
     return after.difference(before).toList();
   }
 

@@ -1,6 +1,8 @@
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../core/city.dart';
+
 class GeoFix {
   const GeoFix({required this.city, this.lat, this.lng});
 
@@ -40,7 +42,11 @@ class LocationService {
       if (city.isEmpty) {
         return GeoFix(city: '', lat: pos.latitude, lng: pos.longitude);
       }
-      return GeoFix(city: city, lat: pos.latitude, lng: pos.longitude);
+      return GeoFix(
+        city: cityLabel(city),
+        lat: pos.latitude,
+        lng: pos.longitude,
+      );
     } catch (_) {
       return null;
     }

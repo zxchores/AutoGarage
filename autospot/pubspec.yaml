@@ -1,7 +1,7 @@
 name: autospot
 description: "AI car spotting collector — photograph cars, identify them, build your garage."
 publish_to: "none"
-version: 1.2.1+4
+version: 1.3.0+5
 
 environment:
   sdk: ^3.13.2

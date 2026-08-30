@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/city.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../domain/models.dart';
@@ -81,7 +82,7 @@ class CarDetailScreen extends ConsumerWidget {
                 const Text('Спот', style: TextStyle(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Text('Дата: ${formatDate(item.spottedAt)}'),
-                Text('Город: ${item.city.isEmpty ? 'не указан' : item.city}'),
+                Text('Город: ${item.city.isEmpty ? 'не указан' : cityLabel(item.city)}'),
                 Text('Цвет: ${item.color}'),
                 Text('Уверенность ИИ: ${item.confidence.name}'),
                 Text(item.fromAi ? 'Источник: Vision API' : 'Источник: демо-режим'),

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:autospot/core/city.dart';
 import 'package:autospot/data/auth.dart';
 import 'package:autospot/data/vision_service.dart';
 import 'package:autospot/domain/catalog.dart';
@@ -64,6 +65,58 @@ void main() {
     expect(matchCatalog('BMW', 'M3')?.id, 'bmw_m3');
     expect(matchCatalog('VW', 'Polo')?.make, 'Volkswagen');
     expect(matchCatalog('Mercedes', 'C-Class')?.id, 'mercedes_c');
+    expect(matchCatalog('bwm', 'M3')?.id, 'bmw_m3');
+    expect(matchCatalog('mersedes', 'C-Class')?.id, 'mercedes_c');
+    expect(matchCatalog('volcwagen', 'Polo')?.make, 'Volkswagen');
+    expect(matchCatalog('hyndai', 'Solaris')?.id, 'hyundai_solaris');
+    expect(matchCatalog('шкода', 'Octavia')?.id, 'skoda_octavia');
+    expect(matchCatalog('gelly', 'Coolray')?.make, 'Geely');
+    expect(matchCatalog('cadilac', 'XT5')?.make, 'Cadillac');
+    expect(matchCatalog('mitshubishi', 'Outlander')?.id, 'mitsubishi_outlander');
+  });
+
+  test('street catalog covers requested brands', () {
+    final makes = carCatalog.map((c) => c.make.toLowerCase()).toSet();
+    for (final brand in [
+      'audi',
+      'toyota',
+      'nissan',
+      'honda',
+      'bmw',
+      'tesla',
+      'mercedes',
+      'hyundai',
+      'skoda',
+      'volkswagen',
+      'opel',
+      'porsche',
+      'mazda',
+      'subaru',
+      'mitsubishi',
+      'lexus',
+      'chery',
+      'geely',
+      'haval',
+      'exeed',
+      'changan',
+      'tank',
+      'ford',
+      'chevrolet',
+      'cadillac',
+      'jeep',
+      'ram',
+      'kia',
+      'genesis',
+      'lada',
+    ]) {
+      expect(
+        makes.any((m) => m.contains(brand)),
+        isTrue,
+        reason: 'missing $brand',
+      );
+    }
+    expect(carCatalog.length, greaterThan(400));
+    expect(carCatalog.map((c) => c.id).toSet().length, carCatalog.length);
   });
 
   test('catalog cars have image assets', () {
@@ -182,6 +235,20 @@ void main() {
     ];
     final ids = unlockedAchievements(garage: garage, city: 'Москва');
     expect(ids, containsAll(['first_spot', 'german_trio', 'city_walker']));
+  });
+
+  test('city names collapse case and spelling variants', () {
+    expect(cityKey('красноярск'), cityKey('Красноярск'));
+    expect(cityKey('КРАСНОЯРСК'), cityKey('Krasnoyarsk'));
+    expect(cityKey('г. Красноярск'), cityKey('krasnoiarsk'));
+    expect(cityLabel('красноярск'), 'Красноярск');
+    expect(cityLabel('KRASNOYARSK'), 'Красноярск');
+    expect(sameCity('мск', 'Москва'), isTrue);
+    expect(sameCity('SPB', 'Питер'), isTrue);
+    expect(sameCity('екб', 'Екатеринбург'), isTrue);
+    expect(cityLabel('москва'), 'Москва');
+    expect(cityLabel('санкт-петербург'), 'Санкт-Петербург');
+    expect(sameCity('Красноярск', 'Новосибирск'), isFalse);
   });
 }
 

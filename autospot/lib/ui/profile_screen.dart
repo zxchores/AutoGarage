@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/city.dart';
 import '../core/theme.dart';
 import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
@@ -43,7 +44,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  profile.city.isEmpty ? 'Город не указан' : profile.city,
+                  profile.city.isEmpty ? 'Город не указан' : cityLabel(profile.city),
                   style: const TextStyle(color: AppColors.mute),
                 ),
                 const SizedBox(height: 14),

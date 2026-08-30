@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/city.dart';
 import '../core/theme.dart';
 import '../state/app_controller.dart';
 import 'widgets.dart';
@@ -22,7 +23,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     final app = ref.read(appProvider);
     _name = TextEditingController(text: app.profile?.name ?? '');
-    _city = TextEditingController(text: app.profile?.city ?? '');
+    _city = TextEditingController(text: cityLabel(app.profile?.city ?? ''));
     _key = TextEditingController(text: app.apiKey ?? '');
   }
 
@@ -50,7 +51,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 10),
           TextField(
             controller: _city,
-            decoration: const InputDecoration(labelText: 'Город'),
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Город',
+              hintText: 'Красноярск, красноярск или Krasnoyarsk',
+            ),
           ),
           const SizedBox(height: 12),
           OrangeButton(

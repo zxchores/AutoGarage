@@ -183,7 +183,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         TextField(
           controller: _city,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Город'),
+          decoration: const InputDecoration(
+            labelText: 'Город',
+            hintText: 'Красноярск',
+          ),
         ),
       ],
     );
