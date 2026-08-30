@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isMe(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow write: if isMe(userId);
+
+      match /garage_cars/{carId} {
+        allow read: if signedIn();
+        allow write: if isMe(userId)
+          && request.resource.data.keys().hasAll([
+            'make', 'model', 'rarity', 'xpEarned', 'spottedAt'
+          ]);
+      }
+
+      match /achievements/{id} {
+        allow read: if signedIn();
+        allow write: if isMe(userId);
+      }
+    }
+
+    match /city_leaderboards/{cityId} {
+      allow read: if signedIn();
+      allow write: if false; // only Cloud Functions
+    }
+
+    match /duels/{duelId} {
+      allow read: if signedIn() && (
+        resource.data.challengerId == request.auth.uid ||
+        resource.data.opponentId == request.auth.uid
+      );
+      allow create: if signedIn()
+        && request.resource.data.challengerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
