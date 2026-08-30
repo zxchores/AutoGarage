@@ -47,6 +47,18 @@ class ProfileScreen extends ConsumerWidget {
                   profile.city.isEmpty ? 'Город не указан' : cityLabel(profile.city),
                   style: const TextStyle(color: AppColors.mute),
                 ),
+                if (profile.clan.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('Клан ${profile.clan}',
+                      style: const TextStyle(color: AppColors.gold)),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  profile.streak > 0
+                      ? 'Серия спотов: ${profile.streak} дн.'
+                      : 'Серия спотов ещё не начата',
+                  style: const TextStyle(color: AppColors.orange),
+                ),
                 const SizedBox(height: 14),
                 LinearProgressIndicator(
                   value: level.progress(profile.xp),

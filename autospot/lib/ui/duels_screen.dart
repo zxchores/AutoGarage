@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
+import '../data/city_board.dart';
 import '../domain/game_logic.dart';
 import '../state/app_controller.dart';
 import 'widgets.dart';
@@ -15,11 +16,27 @@ class DuelsScreen extends ConsumerStatefulWidget {
 
 class _DuelsScreenState extends ConsumerState<DuelsScreen> {
   final _picked = <String>{};
+  List<CityPlayer> _rivals = const [];
+  String? _rivalId;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      final players = await ref.read(appProvider.notifier).cityPlayers();
+      if (!mounted) return;
+      final me = ref.read(appProvider).profile?.id;
+      setState(() {
+        _rivals = players.where((p) => p.id != me).toList();
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appProvider);
     final left = duelCooldownLeft(app.lastDuelAt);
+    final rival = _rivals.where((p) => p.id == _rivalId).firstOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Дуэль из 3 машин')),
@@ -27,8 +44,28 @@ class _DuelsScreenState extends ConsumerState<DuelsScreen> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           const Text(
-            'Выбери 3 карточки. Сравнение: редкость, цена, л.с., обвесы. Победа +40 XP, ничья +15, поражение +5. Кулдаун 3 минуты. Пока нет живых соперников — тренировка против состава дня.',
+            'Выбери 3 карточки. Сравнение: редкость, цена, л.с., обвесы. Победа +40 XP, ничья +15, поражение +5. Кулдаун 3 минуты. Можно вызвать игрока города или тренировку.',
             style: TextStyle(color: AppColors.mute),
+          ),
+          const SizedBox(height: 12),
+          const Text('Соперник', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Тренировка'),
+                selected: _rivalId == null,
+                onSelected: (_) => setState(() => _rivalId = null),
+              ),
+              for (final p in _rivals)
+                ChoiceChip(
+                  label: Text('${p.name}${p.online ? ' • онлайн' : ''}'),
+                  selected: _rivalId == p.id,
+                  onSelected: (_) => setState(() => _rivalId = p.id),
+                ),
+            ],
           ),
           if (left != null) ...[
             const SizedBox(height: 12),
@@ -84,7 +121,9 @@ class _DuelsScreenState extends ConsumerState<DuelsScreen> {
                         .where((c) => _picked.contains(c.id))
                         .toList();
                     try {
-                      final record = ref.read(appProvider.notifier).duelWith(lineup);
+                      final record = ref
+                          .read(appProvider.notifier)
+                          .duelWith(lineup, rival: rival);
                       showDialog<void>(
                         context: context,
                         builder: (_) => _DuelDialog(record: record),

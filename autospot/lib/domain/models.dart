@@ -171,6 +171,7 @@ class GarageCar {
     required this.xpEarned,
     this.catalogId,
     this.fromAi = false,
+    this.district = '',
   });
 
   final String id;
@@ -198,6 +199,7 @@ class GarageCar {
   final int xpEarned;
   final String? catalogId;
   final bool fromAi;
+  final String district;
 
   String get title => '$make $model';
 
@@ -227,6 +229,7 @@ class GarageCar {
         'xpEarned': xpEarned,
         'catalogId': catalogId,
         'fromAi': fromAi,
+        'district': district,
       };
 
   factory GarageCar.fromJson(Map<String, dynamic> json) => GarageCar(
@@ -260,6 +263,7 @@ class GarageCar {
         xpEarned: json['xpEarned'] as int? ?? 0,
         catalogId: json['catalogId'] as String?,
         fromAi: json['fromAi'] == true,
+        district: json['district'] as String? ?? '',
       );
 }
 
@@ -271,6 +275,9 @@ class UserProfile {
     required this.xp,
     required this.createdAt,
     this.login = '',
+    this.streak = 0,
+    this.lastSpotDay = '',
+    this.clan = '',
   });
 
   final String id;
@@ -279,12 +286,18 @@ class UserProfile {
   final int xp;
   final DateTime createdAt;
   final String login;
+  final int streak;
+  final String lastSpotDay;
+  final String clan;
 
   UserProfile copyWith({
     String? name,
     String? city,
     int? xp,
     String? login,
+    int? streak,
+    String? lastSpotDay,
+    String? clan,
   }) =>
       UserProfile(
         id: id,
@@ -293,6 +306,9 @@ class UserProfile {
         xp: xp ?? this.xp,
         createdAt: createdAt,
         login: login ?? this.login,
+        streak: streak ?? this.streak,
+        lastSpotDay: lastSpotDay ?? this.lastSpotDay,
+        clan: clan ?? this.clan,
       );
 
   Map<String, dynamic> toJson() => {
@@ -302,6 +318,9 @@ class UserProfile {
         'xp': xp,
         'createdAt': createdAt.toIso8601String(),
         'login': login,
+        'streak': streak,
+        'lastSpotDay': lastSpotDay,
+        'clan': clan,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -312,6 +331,9 @@ class UserProfile {
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),
         login: json['login'] as String? ?? '',
+        streak: json['streak'] as int? ?? 0,
+        lastSpotDay: json['lastSpotDay'] as String? ?? '',
+        clan: json['clan'] as String? ?? '',
       );
 }
 
@@ -437,6 +459,7 @@ class XpBreakdown {
     required this.hunt,
     required this.duplicate,
     required this.total,
+    this.streak = 0,
   });
 
   final int base;
@@ -445,14 +468,41 @@ class XpBreakdown {
   final int hunt;
   final bool duplicate;
   final int total;
+  final int streak;
 
   List<(String, String)> get lines => [
         ('Редкость', '+$base'),
         if (tuning != 0) ('Тюнинг', '+$tuning'),
         if (photo != 0) ('Кадр', photo > 0 ? '+$photo' : '$photo'),
         if (hunt != 0) ('Охота дня', '+$hunt'),
-        if (duplicate) ('Дубликат модели', '×0.3'),
+        if (streak != 0) ('Серия дней', '+$streak'),
+        if (duplicate) ('Дубликат цвета и поколения', '×0.3'),
       ];
+}
+
+class PendingSpot {
+  const PendingSpot({
+    required this.id,
+    required this.photoId,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String photoId;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'photoId': photoId,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory PendingSpot.fromJson(Map<String, dynamic> json) => PendingSpot(
+        id: json['id'] as String,
+        photoId: json['photoId'] as String? ?? '',
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
 }
 
 class IdentifiedSpot {

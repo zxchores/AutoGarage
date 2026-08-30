@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -56,6 +55,12 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
   }
 
   void _startReveal() {
+    if (_spot.rarity == Rarity.legendary) {
+      HapticFeedback.heavyImpact();
+      SystemSound.play(SystemSoundType.alert);
+    } else if (_spot.rarity == Rarity.epic) {
+      HapticFeedback.mediumImpact();
+    }
     setState(() => _phase = 1);
     _reveal.forward(from: 0).whenComplete(() {
       if (mounted) setState(() => _phase = 2);
@@ -125,30 +130,60 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
 
   Widget _revealView() {
     final color = AppColors.rarity(_spot.rarity);
+    final legendary = _spot.rarity == Rarity.legendary;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: ScaleTransition(
-          scale: CurvedAnimation(parent: _reveal, curve: Curves.easeOutBack),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.auto_awesome, color: color, size: 64),
-              const SizedBox(height: 12),
-              Text(
-                _spot.rarity.label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 3,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (legendary)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [Color(0x66EAB308), Colors.black],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(_spot.title, style: Theme.of(context).textTheme.titleLarge),
-            ],
+            ),
+          Center(
+            child: ScaleTransition(
+              scale: CurvedAnimation(parent: _reveal, curve: Curves.easeOutBack),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    legendary ? Icons.workspace_premium : Icons.auto_awesome,
+                    color: color,
+                    size: legendary ? 84 : 64,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _spot.rarity.label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: legendary ? 42 : 36,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_spot.title, style: Theme.of(context).textTheme.titleLarge),
+                  if (legendary)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Text(
+                        'ЛЕГЕНДАРНЫЙ ДРОП',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

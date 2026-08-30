@@ -1,0 +1,6 @@
+{
+  "version": "1.4.0",
+  "build": 8,
+  "apk": "https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-android-arm64.apk",
+  "notes": "Живые дуэли, облако, серия спотов, фильтры и точнее распознавание"
+}

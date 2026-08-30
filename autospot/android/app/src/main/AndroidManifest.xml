@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="AutoSpot"
@@ -38,7 +39,11 @@
             <data android:mimeType="text/plain"/>
         </intent>
         <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE"/>
+                <action android:name="android.media.action.IMAGE_CAPTURE"/>
+        </intent>
+        <intent>
+                <action android:name="android.intent.action.VIEW"/>
+                <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

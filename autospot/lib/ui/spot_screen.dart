@@ -112,7 +112,7 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
     } on RecognitionFailedException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text('$e Кадр сохранён в очередь.')),
         );
       }
     } catch (e) {
@@ -136,8 +136,8 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
   Future<void> _gallery() async {
     final file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1280,
-      imageQuality: 72,
+      maxWidth: 1920,
+      imageQuality: 88,
     );
     if (file == null) return;
     await _process(Uint8List.fromList(await file.readAsBytes()));

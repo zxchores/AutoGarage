@@ -11,6 +11,11 @@ class CityPlayer {
     required this.xp,
     required this.cars,
     required this.lastSeen,
+    this.value = 0,
+    this.hp = 0,
+    this.kits = 0,
+    this.rarest = 0,
+    this.clan = '',
   });
 
   final String id;
@@ -18,11 +23,18 @@ class CityPlayer {
   final int xp;
   final int cars;
   final int lastSeen;
+  final int value;
+  final int hp;
+  final int kits;
+  final int rarest;
+  final String clan;
 
   bool get online {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return now - lastSeen <= 15 * 60;
   }
+
+  bool get hasLineup => value > 0 || hp > 0;
 
   Map<String, dynamic> toJson() => {
         'i': id,
@@ -30,6 +42,11 @@ class CityPlayer {
         'x': xp,
         'k': cars,
         't': lastSeen,
+        if (value > 0) 'v': value,
+        if (hp > 0) 'h': hp,
+        if (kits > 0) 'b': kits,
+        if (rarest > 0) 'r': rarest,
+        if (clan.isNotEmpty) 'l': clan,
       };
 
   factory CityPlayer.fromJson(Map<String, dynamic> json) => CityPlayer(
@@ -38,6 +55,11 @@ class CityPlayer {
         xp: (json['x'] as num?)?.toInt() ?? 0,
         cars: (json['k'] as num?)?.toInt() ?? 0,
         lastSeen: (json['t'] as num?)?.toInt() ?? 0,
+        value: (json['v'] as num?)?.toInt() ?? 0,
+        hp: (json['h'] as num?)?.toInt() ?? 0,
+        kits: (json['b'] as num?)?.toInt() ?? 0,
+        rarest: (json['r'] as num?)?.toInt() ?? 0,
+        clan: json['l']?.toString() ?? '',
       );
 }
 
@@ -83,6 +105,11 @@ class CityBoard {
       xp: me.xp,
       cars: me.cars,
       lastSeen: now,
+      value: me.value,
+      hp: me.hp,
+      kits: me.kits,
+      rarest: me.rarest,
+      clan: me.clan,
     );
     final ranked = merged.values.toList()
       ..sort((a, b) {
@@ -135,6 +162,31 @@ class CityBoard {
   }
 
   String _encode(List<CityPlayer> players) {
+    var list = players;
+    var encoded = _pack(list);
+    while (encoded.length > 1000 && list.length > 3) {
+      list = list.sublist(0, list.length - 1);
+      encoded = _pack(list);
+    }
+    if (encoded.length > 1000) {
+      encoded = _pack(
+        list
+            .map(
+              (p) => CityPlayer(
+                id: p.id,
+                name: p.name,
+                xp: p.xp,
+                cars: p.cars,
+                lastSeen: p.lastSeen,
+              ),
+            )
+            .toList(),
+      );
+    }
+    return encoded;
+  }
+
+  String _pack(List<CityPlayer> players) {
     final json = jsonEncode(players.map((p) => p.toJson()).toList());
     return base64Url.encode(utf8.encode(json)).replaceAll('=', '');
   }

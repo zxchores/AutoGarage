@@ -10,23 +10,21 @@ import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
 
 const visionPrompt = '''
-You identify street cars for a spotting game. Return STRICT JSON only.
+Identify the main production car in THIS photo. Look at grille, headlights, tail lights, badge, proportions.
+Ignore people, shops, interiors, plates. Never copy a license plate.
 
-Look at badges, grille, headlights, tail lights, proportions and body.
-Ignore people, shops, plates, interiors. Never transcribe a plate.
-
-If a production car is clearly visible:
-- make: official English brand (BMW, Mercedes-Benz, Volkswagen, Toyota, Lada, Chery, Geely, Haval, Kia, Hyundai, Skoda, Audi)
-- model: official model name, not a body type. Examples of FORM not answers: C-Class, 3 Series, Tiggo 7 Pro.
-- If a performance badge is readable (M3, M5, GTI, R, RS6, AMG, Type R, WRX), keep that exact model, not the base car.
-- generation: factory code if you know it (G20, W206, B9), else "".
-- color: simple color word.
-If unsure, still name the closest real make/model and set confidence to "low".
-If there is NO car (sky, room, wall, person, empty street, bike only):
-{"is_car":false,"make":"","model":""}
+Reply with ONE line, then JSON.
+Line: MAKE|MODEL|GEN|COLOR
+Example form only: Toyota|RAV4|XA50|white
 
 JSON:
-{"is_car":true,"make":"","model":"","generation":"","year_from":0,"year_to":0,"body_type":"","color":"","confidence":"low|medium|high","condition":"good","tuning":{"bodykit":false,"wheels":false,"spoiler":false,"vinyl":false,"exhaust":false,"lowered":false,"details":[]},"photo_quality":"average","visible_license_plate":false,"notes":""}
+{"is_car":true,"make":"","model":"","generation":"","year_from":0,"year_to":0,"body_type":"","color":"","confidence":"low|medium|high","condition":"good","tuning":{"bodykit":false,"wheels":false,"spoiler":false,"vinyl":false,"exhaust":false,"lowered":false,"details":[]},"photo_quality":"average","notes":""}
+
+Rules:
+- Official English names. Model is the nameplate, never SUV/sedan/crossover.
+- Keep performance badges if readable: M3, GTI, RS6, AMG, Type R, WRX.
+- Common street cars: Lada, Haval, Geely, Chery, Kia, Hyundai, Skoda, VW, Toyota, BMW, Mercedes-Benz, Audi.
+- No car: NO_CAR and {"is_car":false,"make":"","model":""}
 ''';
 
 class PhotoAnalysis {
@@ -155,19 +153,15 @@ bool _looksLikeVehicleDecoded(img.Image decoded) {
 }
 
 const _spacePrompt = '''
-Identify the main production car from badges, grille, lights and body. STRICT JSON only.
-{"is_car":true,"make":"","model":"","generation":"","body_type":"","color":"","confidence":"medium"}
-Rules:
-- make and model must be real official names in English.
-- model is the nameplate, never SUV/sedan/crossover.
-- Keep performance badges: M3, GTI, RS6, AMG, Type R, WRX.
-- Street cars in Russia/CIS are common: Lada, Haval, Geely, Chery, Changan, Exeed, Tank, Kia, Hyundai, Skoda, VW, Toyota, BMW, Mercedes-Benz.
-- No car in the photo => {"is_car":false,"make":"","model":""}
-- Do not invent a car. Fill make and model from THIS photo only.
+What production car is in this photo? Answer from THIS image only.
+First line: MAKE|MODEL|GEN|COLOR
+Then JSON: {"is_car":true,"make":"","model":"","generation":"","body_type":"","color":"","confidence":"medium"}
+Model is a nameplate, not SUV/sedan. Keep M3/GTI/RS/AMG/Type R if the badge is visible.
+No car: NO_CAR
 ''';
 
-const _builtInSpaces = <String>[
-  'maziyarpanahi-qwen2-vl-2b.hf.space',
+const _builtInSpaces = <(String, String)>[
+  ('maziyarpanahi-qwen2-vl-2b.hf.space', 'qwen_inference'),
 ];
 
 String? resolveVisionKey(String? stored) {
@@ -187,23 +181,23 @@ Uint8List compressForVision(Uint8List bytes) {
 }
 
 img.Image focusCar(img.Image src) {
-  if (src.width < 640 || src.height < 480) return src;
-  final x = (src.width * 0.06).round();
-  final y = (src.height * 0.14).round();
-  final w = (src.width * 0.88).round();
-  final h = (src.height * 0.66).round();
-  if (w < 200 || h < 160) return src;
+  if (src.width < 720 || src.height < 540) return src;
+  final x = (src.width * 0.03).round();
+  final y = (src.height * 0.06).round();
+  final w = (src.width * 0.94).round();
+  final h = (src.height * 0.88).round();
+  if (w < 320 || h < 240) return src;
   return img.copyCrop(src, x: x, y: y, width: w, height: h);
 }
 
 Uint8List _jpegForVision(img.Image decoded) {
   var work = decoded;
-  if (work.width > 768) {
-    work = img.copyResize(work, width: 768);
-  } else if (work.height > 960) {
-    work = img.copyResize(work, height: 960);
+  if (work.width > 1024) {
+    work = img.copyResize(work, width: 1024);
+  } else if (work.height > 1280) {
+    work = img.copyResize(work, height: 1280);
   }
-  return Uint8List.fromList(img.encodeJpg(work, quality: 74));
+  return Uint8List.fromList(img.encodeJpg(work, quality: 82));
 }
 
 bool isFlatFrame(Uint8List bytes) {
@@ -280,10 +274,10 @@ class VisionService {
       } catch (_) {}
     }
 
-    for (final host in _builtInSpaces) {
+    for (final space in _builtInSpaces) {
       try {
         return _spotFromExtraction(
-          extraction: await _huggingFaceSpace(compact, host),
+          extraction: await _huggingFaceSpace(compact, space.$1, space.$2),
           photoBytes: photoBytes,
           hash: hash,
           analysis: analysis,
@@ -355,12 +349,16 @@ class VisionService {
     );
   }
 
-  Future<VisionExtraction> _huggingFaceSpace(Uint8List bytes, String host) async {
+  Future<VisionExtraction> _huggingFaceSpace(
+    Uint8List bytes,
+    String host,
+    String endpoint,
+  ) async {
     final upload = http.MultipartRequest(
       'POST',
       Uri.parse('https://$host/upload'),
     );
-    upload.headers['User-Agent'] = 'AutoSpot/1.3';
+    upload.headers['User-Agent'] = 'AutoSpot/1.4';
     upload.files.add(
       http.MultipartFile.fromBytes('files', bytes, filename: 'spot.jpg'),
     );
@@ -379,10 +377,10 @@ class VisionService {
     };
     final call = await _client
         .post(
-          Uri.parse('https://$host/call/qwen_inference'),
+          Uri.parse('https://$host/call/$endpoint'),
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'AutoSpot/1.3',
+            'User-Agent': 'AutoSpot/1.4',
           },
           body: jsonEncode({
             'data': [file, _spacePrompt],
@@ -398,10 +396,10 @@ class VisionService {
     }
     final stream = await _client
         .get(
-          Uri.parse('https://$host/call/qwen_inference/$eventId'),
+          Uri.parse('https://$host/call/$endpoint/$eventId'),
           headers: {
             'Accept': 'text/event-stream',
-            'User-Agent': 'AutoSpot/1.3',
+            'User-Agent': 'AutoSpot/1.4',
           },
         )
         .timeout(const Duration(seconds: 22));
@@ -515,15 +513,9 @@ String? parseSpaceStream(String raw) {
 
 VisionExtraction parseVisionReply(String raw) {
   final cleaned = raw.trim().replaceAll(RegExp(r'```json|```'), '').trim();
-  final start = cleaned.indexOf('{');
-  final end = cleaned.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try {
-      return parseVisionJson(cleaned.substring(start, end + 1));
-    } catch (_) {}
-  }
   final lower = cleaned.toLowerCase();
-  if (RegExp(r'no car|not a car|нет машин|не вижу').hasMatch(lower)) {
+  if (RegExp(r'no_car|no car|not a car|нет машин|не вижу').hasMatch(lower) &&
+      !RegExp(r'"is_car"\s*:\s*true').hasMatch(lower)) {
     return const VisionExtraction(
       isCar: false,
       make: '',
@@ -538,6 +530,49 @@ VisionExtraction parseVisionReply(String raw) {
       tuning: TuningFlags(),
       photoQuality: PhotoQuality.average,
     );
+  }
+  final start = cleaned.indexOf('{');
+  final end = cleaned.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try {
+      final parsed = parseVisionJson(cleaned.substring(start, end + 1));
+      if (parsed.make.trim().isNotEmpty || parsed.model.trim().isNotEmpty) {
+        return parsed;
+      }
+    } catch (_) {}
+  }
+  final pipe = RegExp(
+    r'([A-Za-zА-Яа-яёЁ0-9.\- ]{2,24})\|([A-Za-zА-Яа-яёЁ0-9.\- ]{1,40})\|([^|\n]{0,24})\|?([^|\n]{0,20})',
+  ).firstMatch(cleaned);
+  if (pipe != null) {
+    final make = pipe.group(1)!.trim();
+    final model = pipe.group(2)!.trim();
+    if (make.toLowerCase() != 'make' && model.toLowerCase() != 'model') {
+      final guessed = matchCatalog(make, model);
+      return VisionExtraction(
+        isCar: true,
+        make: guessed?.make ?? make,
+        model: guessed?.model ?? model,
+        generation: pipe.group(3)?.trim() ?? guessed?.generation ?? '',
+        yearFrom: guessed?.yearFrom ?? 2018,
+        yearTo: guessed?.yearTo ?? 2024,
+        color: pipe.group(4)?.trim() ?? '',
+        bodyType: guessed?.bodyType ?? '',
+        confidence: Confidence.medium,
+        condition: CarCondition.good,
+        tuning: const TuningFlags(),
+        photoQuality: PhotoQuality.average,
+        notes: cleaned,
+      );
+    }
+  }
+  final labeled = RegExp(
+    r'make\s*[:=]\s*([A-Za-zА-Яа-яёЁ0-9.\- ]+).*model\s*[:=]\s*([A-Za-zА-Яа-яёЁ0-9.\- ]+)',
+    caseSensitive: false,
+    dotAll: true,
+  ).firstMatch(cleaned);
+  if (labeled != null) {
+    return parseVisionReply('${labeled.group(1)} ${labeled.group(2)}');
   }
   final parts = cleaned
       .replaceAll(RegExp(r'[^A-Za-z0-9А-Яа-яёЁ\- ]'), ' ')

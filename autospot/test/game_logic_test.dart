@@ -262,6 +262,110 @@ data: ["{\\"is_car\\":true,\\"make\\":\\"BMW\\",\\"model\\":\\"3 Series\\"}"]
     expect(ids, containsAll(['first_spot', 'german_trio', 'city_walker']));
   });
 
+  test('color and generation make a separate garage card', () {
+    final black = _car('BMW', 'X5', color: 'чёрный', generation: 'G05', catalogId: 'bmw_x5');
+    final white = buildIdentifiedSpot(
+      extraction: const VisionExtraction(
+        isCar: true,
+        make: 'BMW',
+        model: 'X5',
+        generation: 'G05',
+        yearFrom: 2019,
+        yearTo: 2024,
+        color: 'white',
+        bodyType: 'SUV',
+        confidence: Confidence.high,
+        condition: CarCondition.good,
+        tuning: TuningFlags(),
+        photoQuality: PhotoQuality.good,
+      ),
+      spec: matchCatalog('BMW', 'X5'),
+      photoBytes: const [],
+      photoHash: 'h1',
+      photoHints: const [],
+      garage: [black],
+      fromAi: true,
+      needsCatalogPick: false,
+      huntMatch: false,
+    );
+    expect(white.duplicateModel, isFalse);
+    expect(white.firstCatch, isTrue);
+    final sameBlack = buildIdentifiedSpot(
+      extraction: const VisionExtraction(
+        isCar: true,
+        make: 'BMW',
+        model: 'X5',
+        generation: 'G05',
+        yearFrom: 2019,
+        yearTo: 2024,
+        color: 'black',
+        bodyType: 'SUV',
+        confidence: Confidence.high,
+        condition: CarCondition.good,
+        tuning: TuningFlags(),
+        photoQuality: PhotoQuality.good,
+      ),
+      spec: matchCatalog('BMW', 'X5'),
+      photoBytes: const [],
+      photoHash: 'h2',
+      photoHints: const [],
+      garage: [black],
+      fromAi: true,
+      needsCatalogPick: false,
+      huntMatch: false,
+    );
+    expect(sameBlack.duplicateModel, isTrue);
+  });
+
+  test('daily streak grows after yesterday and resets otherwise', () {
+    expect(
+      streakAfterSpot(lastSpotDay: '2026-08-29', streak: 3, now: DateTime(2026, 8, 30)),
+      4,
+    );
+    expect(
+      streakAfterSpot(lastSpotDay: '2026-08-28', streak: 3, now: DateTime(2026, 8, 30)),
+      1,
+    );
+    expect(
+      streakAfterSpot(lastSpotDay: '2026-08-30', streak: 5, now: DateTime(2026, 8, 30)),
+      5,
+    );
+    final xp = xpBreakdown(
+      rarity: Rarity.common,
+      tuning: const TuningFlags(),
+      photoQuality: PhotoQuality.average,
+      duplicateModel: false,
+      huntMatch: false,
+      streakDays: 5,
+    );
+    expect(xp.streak, 10);
+    expect(xp.lines.any((e) => e.$1.contains('Серия')), isTrue);
+  });
+
+  test('weekend hunt and extra series exist', () {
+    final saturday = huntFor(DateTime(2026, 8, 29));
+    expect(saturday.id, startsWith('weekend_'));
+    expect(carSeries.any((s) => s.id == 'bmw_m'), isTrue);
+    expect(carSeries.any((s) => s.id == 'tiggo'), isTrue);
+    expect(carSeries.any((s) => s.id == 'vesta'), isTrue);
+    final vesta = carSeries.firstWhere((s) => s.id == 'vesta');
+    expect(
+      vesta.progress([
+        _car('Lada', 'Vesta'),
+        _car('Lada', 'Vesta SW'),
+        _car('Lada', 'Vesta SW Cross'),
+      ]),
+      3,
+    );
+  });
+
+  test('pipe vision reply is parsed', () {
+    final parsed = parseVisionReply('BMW|3 Series|G20|black');
+    expect(parsed.isCar, isTrue);
+    expect(parsed.make.toLowerCase(), contains('bmw'));
+    expect(parsed.model.toLowerCase(), contains('3'));
+  });
+
   test('city names collapse case and spelling variants', () {
     expect(cityKey('красноярск'), cityKey('Красноярск'));
     expect(cityKey('КРАСНОЯРСК'), cityKey('Krasnoyarsk'));
@@ -277,18 +381,24 @@ data: ["{\\"is_car\\":true,\\"make\\":\\"BMW\\",\\"model\\":\\"3 Series\\"}"]
   });
 }
 
-GarageCar _car(String make, String model) {
+GarageCar _car(
+  String make,
+  String model, {
+  String color = 'чёрный',
+  String generation = '',
+  String? catalogId,
+}) {
   return GarageCar(
-    id: make,
+    id: '$make-$model-$color-$generation',
     photoId: 'p',
     spottedAt: DateTime(2026, 1, 1, 12),
     city: 'Москва',
     make: make,
     model: model,
-    generation: '',
+    generation: generation,
     yearFrom: 2020,
     yearTo: 2024,
-    color: 'чёрный',
+    color: color,
     bodyType: 'седан',
     rarity: Rarity.rare,
     priceRub: 400000,
@@ -300,5 +410,6 @@ GarageCar _car(String make, String model) {
     photoQuality: PhotoQuality.good,
     confidence: Confidence.high,
     xpEarned: 40,
+    catalogId: catalogId,
   );
 }

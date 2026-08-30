@@ -5,21 +5,47 @@ import 'package:go_router/go_router.dart';
 import '../core/city.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../data/cloud_sync.dart';
 import '../domain/models.dart';
 import '../state/app_controller.dart';
 import 'widgets.dart';
 
-class CarDetailScreen extends ConsumerWidget {
+class CarDetailScreen extends ConsumerStatefulWidget {
   const CarDetailScreen({super.key, required this.carId});
 
   final String carId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CarDetailScreen> createState() => _CarDetailScreenState();
+}
+
+class _CarDetailScreenState extends ConsumerState<CarDetailScreen> {
+  List<Sighting> _seen = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_loadSeen);
+  }
+
+  Future<void> _loadSeen() async {
+    final garage = ref.read(appProvider).garage;
+    GarageCar? car;
+    for (final item in garage) {
+      if (item.id == widget.carId) car = item;
+    }
+    final id = car?.catalogId;
+    if (id == null || id.isEmpty) return;
+    final list = await ref.read(appProvider.notifier).carSightings(id);
+    if (mounted) setState(() => _seen = list);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final garage = ref.watch(appProvider).garage;
     GarageCar? car;
     for (final item in garage) {
-      if (item.id == carId) car = item;
+      if (item.id == widget.carId) car = item;
     }
     if (car == null) {
       return Scaffold(
@@ -51,7 +77,11 @@ class CarDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(item.title, style: Theme.of(context).textTheme.headlineMedium),
           Text(
-            '${item.generation} • ${item.yearFrom}–${item.yearTo}',
+            [
+              if (item.color.isNotEmpty) item.color,
+              if (item.generation.isNotEmpty) item.generation,
+              '${item.yearFrom}–${item.yearTo}',
+            ].join(' • '),
             style: const TextStyle(color: AppColors.mute),
           ),
           const SizedBox(height: 16),
@@ -83,7 +113,9 @@ class CarDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text('Дата: ${formatDate(item.spottedAt)}'),
                 Text('Город: ${item.city.isEmpty ? 'не указан' : cityLabel(item.city)}'),
+                if (item.district.isNotEmpty) Text('Район: ${item.district}'),
                 Text('Цвет: ${item.color}'),
+                Text('Поколение: ${item.generation}'),
                 Text('Уверенность ИИ: ${item.confidence.name}'),
                 Text(item.fromAi ? 'Источник: Vision API' : 'Источник: демо-режим'),
               ],
@@ -104,6 +136,23 @@ class CarDetailScreen extends ConsumerWidget {
               ],
             ),
           ],
+          const SizedBox(height: 16),
+          const Text('Видел такую', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          if (_seen.isEmpty)
+            const Text(
+              'Пока никто из города не отметил эту модель',
+              style: TextStyle(color: AppColors.mute),
+            )
+          else
+            for (final s in _seen)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Text('${s.nick} • ${formatDate(s.at)}'),
+                ),
+              ),
           const SizedBox(height: 20),
           TextButton(
             onPressed: () => context.pop(),

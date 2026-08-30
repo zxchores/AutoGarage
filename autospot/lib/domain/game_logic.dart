@@ -48,12 +48,99 @@ LevelInfo levelFor(int xp) {
   );
 }
 
+String normalizeColor(String raw) {
+  final n = raw.toLowerCase().trim();
+  if (n.isEmpty) return '';
+  const map = <String, String>{
+    'black': 'чёрный',
+    'черный': 'чёрный',
+    'чёрный': 'чёрный',
+    'white': 'белый',
+    'белый': 'белый',
+    'gray': 'серый',
+    'grey': 'серый',
+    'серебристый': 'серый',
+    'silver': 'серый',
+    'серый': 'серый',
+    'blue': 'синий',
+    'синий': 'синий',
+    'голубой': 'синий',
+    'red': 'красный',
+    'красный': 'красный',
+    'green': 'зелёный',
+    'зеленый': 'зелёный',
+    'зелёный': 'зелёный',
+    'yellow': 'жёлтый',
+    'желтый': 'жёлтый',
+    'жёлтый': 'жёлтый',
+    'orange': 'оранжевый',
+    'оранжевый': 'оранжевый',
+    'brown': 'коричневый',
+    'коричневый': 'коричневый',
+    'purple': 'фиолетовый',
+    'фиолетовый': 'фиолетовый',
+    'beige': 'бежевый',
+    'бежевый': 'бежевый',
+    'gold': 'золотой',
+    'золотой': 'золотой',
+  };
+  if (map.containsKey(n)) return map[n]!;
+  for (final e in map.entries) {
+    if (n.contains(e.key)) return e.value;
+  }
+  return n;
+}
+
+String variantKey({
+  required String? catalogId,
+  required String make,
+  required String model,
+  required String color,
+  required String generation,
+}) {
+  final id = (catalogId ?? '$make|$model').toLowerCase().trim();
+  return '$id|${normalizeColor(color)}|${generation.toLowerCase().trim()}';
+}
+
+bool sameVariant(GarageCar car, {required String? catalogId, required String make, required String model, required String color, required String generation}) {
+  return variantKey(
+        catalogId: car.catalogId,
+        make: car.make,
+        model: car.model,
+        color: car.color,
+        generation: car.generation,
+      ) ==
+      variantKey(
+        catalogId: catalogId,
+        make: make,
+        model: model,
+        color: color,
+        generation: generation,
+      );
+}
+
+int streakAfterSpot({required String lastSpotDay, required int streak, required DateTime now}) {
+  final today = huntDayKey(now);
+  if (lastSpotDay == today) return streak < 1 ? 1 : streak;
+  final yesterday = huntDayKey(now.subtract(const Duration(days: 1)));
+  if (lastSpotDay == yesterday) return streak + 1;
+  return 1;
+}
+
+int streakBonusXp(int streak) => (streak.clamp(1, 14) * 2);
+
+String huntDayKey(DateTime now) {
+  final d = DateTime(now.year, now.month, now.day);
+  return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+}
+
 XpBreakdown xpBreakdown({
   required Rarity rarity,
   required TuningFlags tuning,
   required PhotoQuality photoQuality,
   required bool duplicateModel,
   required bool huntMatch,
+  int streakDays = 0,
 }) {
   final base = switch (rarity) {
     Rarity.common => 15,
@@ -71,7 +158,8 @@ XpBreakdown xpBreakdown({
     PhotoQuality.excellent => 18,
   };
   final hunt = huntMatch ? 25 : 0;
-  var total = base + tuningXp + photo + hunt;
+  final streak = streakDays > 0 ? streakBonusXp(streakDays) : 0;
+  var total = base + tuningXp + photo + hunt + streak;
   if (duplicateModel) {
     total = (total * 0.3).round();
   }
@@ -82,6 +170,7 @@ XpBreakdown xpBreakdown({
     hunt: hunt,
     duplicate: duplicateModel,
     total: total.clamp(1, 400),
+    streak: streak,
   );
 }
 
@@ -92,6 +181,7 @@ int xpForSpot({
   required Confidence confidence,
   required bool duplicateModel,
   bool huntMatch = false,
+  int streakDays = 0,
 }) {
   return xpBreakdown(
     rarity: rarity,
@@ -99,6 +189,7 @@ int xpForSpot({
     photoQuality: photoQuality,
     duplicateModel: duplicateModel,
     huntMatch: huntMatch,
+    streakDays: streakDays,
   ).total;
 }
 
@@ -258,14 +349,22 @@ IdentifiedSpot buildIdentifiedSpot({
   required bool fromAi,
   required bool needsCatalogPick,
   required bool huntMatch,
+  int streakDays = 0,
 }) {
   final resolved = spec;
   final rarity = resolved?.rarity ?? Rarity.common;
   final duplicate = resolved != null &&
       garage.any(
-        (c) =>
-            c.make.toLowerCase() == resolved.make.toLowerCase() &&
-            c.model.toLowerCase() == resolved.model.toLowerCase(),
+        (c) => sameVariant(
+          c,
+          catalogId: resolved.id,
+          make: resolved.make,
+          model: resolved.model,
+          color: extraction.color,
+          generation: extraction.generation.isEmpty
+              ? resolved.generation
+              : extraction.generation,
+        ),
       );
   final breakdown = xpBreakdown(
     rarity: rarity,
@@ -273,6 +372,7 @@ IdentifiedSpot buildIdentifiedSpot({
     photoQuality: extraction.photoQuality,
     duplicateModel: duplicate,
     huntMatch: huntMatch && !duplicate,
+    streakDays: streakDays,
   );
   return IdentifiedSpot(
     extraction: extraction,
@@ -325,6 +425,9 @@ IdentifiedSpot applyCatalogPick({
     fromAi: current.fromAi,
     needsCatalogPick: false,
     huntMatch: huntMatch,
+    streakDays: current.breakdown.streak > 0
+        ? (current.breakdown.streak ~/ 2).clamp(1, 14)
+        : 0,
   );
 }
 

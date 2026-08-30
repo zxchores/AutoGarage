@@ -21,48 +21,61 @@ class AppColors {
       };
 }
 
-ThemeData buildTheme() {
+ThemeData buildTheme({bool light = false, bool large = false}) {
+  final scale = large ? 1.18 : 1.0;
+  final bg = light ? const Color(0xFFF3EEE6) : AppColors.bg;
+  final surface = light ? const Color(0xFFE8E2D8) : AppColors.surface;
+  final card = light ? const Color(0xFF2A241C) : AppColors.card;
+  final text = light ? const Color(0xFF161A22) : AppColors.text;
   final base = ThemeData(
-    brightness: Brightness.dark,
+    brightness: light ? Brightness.light : Brightness.dark,
     useMaterial3: true,
-    scaffoldBackgroundColor: AppColors.bg,
-    colorScheme: const ColorScheme.dark(
-      primary: AppColors.orange,
-      secondary: AppColors.gold,
-      surface: AppColors.surface,
-    ),
+    scaffoldBackgroundColor: bg,
+    colorScheme: light
+        ? ColorScheme.light(
+            primary: AppColors.orange,
+            secondary: AppColors.gold,
+            surface: surface,
+          )
+        : const ColorScheme.dark(
+            primary: AppColors.orange,
+            secondary: AppColors.gold,
+            surface: AppColors.surface,
+          ),
   );
-  final text = GoogleFonts.dmSansTextTheme(base.textTheme).apply(
-    bodyColor: AppColors.text,
-    displayColor: AppColors.text,
+  final textTheme = GoogleFonts.dmSansTextTheme(base.textTheme).apply(
+    bodyColor: text,
+    displayColor: text,
+    fontSizeFactor: scale,
   );
   return base.copyWith(
-    textTheme: text.copyWith(
+    textTheme: textTheme.copyWith(
       headlineLarge: GoogleFonts.orbitron(
-        fontSize: 32,
+        fontSize: 32 * scale,
         fontWeight: FontWeight.w700,
-        color: AppColors.text,
+        color: text,
         letterSpacing: 1.2,
       ),
       headlineMedium: GoogleFonts.orbitron(
-        fontSize: 22,
+        fontSize: 22 * scale,
         fontWeight: FontWeight.w700,
-        color: AppColors.text,
+        color: text,
       ),
       titleLarge: GoogleFonts.orbitron(
-        fontSize: 18,
+        fontSize: 18 * scale,
         fontWeight: FontWeight.w600,
-        color: AppColors.text,
+        color: text,
       ),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
+      foregroundColor: text,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.card,
+      fillColor: card,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: AppColors.line),

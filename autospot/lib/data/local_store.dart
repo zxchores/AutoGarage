@@ -22,6 +22,9 @@ class AppSnapshot {
     this.lastDuelAt,
     this.huntCompletedOn,
     this.lastError,
+    this.lightTheme = false,
+    this.largeText = false,
+    this.pendingSpots = const [],
   });
 
   final bool ready;
@@ -35,6 +38,9 @@ class AppSnapshot {
   final DateTime? lastDuelAt;
   final String? huntCompletedOn;
   final String? lastError;
+  final bool lightTheme;
+  final bool largeText;
+  final List<PendingSpot> pendingSpots;
 
   bool get onboarded =>
       sessionUserId != null &&
@@ -54,6 +60,9 @@ class AppSnapshot {
     DateTime? lastDuelAt,
     String? huntCompletedOn,
     String? lastError,
+    bool? lightTheme,
+    bool? largeText,
+    List<PendingSpot>? pendingSpots,
     bool clearError = false,
     bool clearSession = false,
   }) =>
@@ -70,6 +79,9 @@ class AppSnapshot {
         huntCompletedOn:
             clearSession ? null : (huntCompletedOn ?? this.huntCompletedOn),
         lastError: clearError ? null : (lastError ?? this.lastError),
+        lightTheme: lightTheme ?? this.lightTheme,
+        largeText: largeText ?? this.largeText,
+        pendingSpots: clearSession ? const [] : (pendingSpots ?? this.pendingSpots),
       );
 }
 
@@ -84,6 +96,8 @@ class LocalStore {
   static const _legacyHashes = 'autospot.hashes';
   static const _legacyDuelAt = 'autospot.lastDuel';
   static const _legacyHunt = 'autospot.hunt';
+  static const _light = 'autospot.ui.light';
+  static const _large = 'autospot.ui.large';
 
   final Map<String, Uint8List> memoryPhotos = {};
 
@@ -153,6 +167,8 @@ class LocalStore {
         achievements: const {},
         duels: const [],
         apiKey: prefs.getString(_apiKey),
+        lightTheme: prefs.getBool(_light) ?? false,
+        largeText: prefs.getBool(_large) ?? false,
       );
     }
 
@@ -199,6 +215,14 @@ class LocalStore {
       ),
       huntCompletedOn:
           prefs.getString(_uk(account.id, 'hunt')) ?? prefs.getString(_legacyHunt),
+      lightTheme: prefs.getBool(_light) ?? false,
+      largeText: prefs.getBool(_large) ?? false,
+      pendingSpots: ((jsonDecode(
+                prefs.getString(_uk(account.id, 'pending')) ?? '[]',
+              ) as List)
+            .whereType<Map>()
+            .map((e) => PendingSpot.fromJson(e.cast<String, dynamic>()))
+            .toList()),
     );
   }
 
@@ -206,6 +230,8 @@ class LocalStore {
     final prefs = await SharedPreferences.getInstance();
     final userId = snapshot.sessionUserId;
     final key = snapshot.apiKey;
+    await prefs.setBool(_light, snapshot.lightTheme);
+    await prefs.setBool(_large, snapshot.largeText);
     if (key == null || key.isEmpty) {
       await prefs.remove(_apiKey);
     } else {
@@ -247,6 +273,10 @@ class LocalStore {
     } else {
       await prefs.setString(_uk(userId, 'hunt'), hunt);
     }
+    await prefs.setString(
+      _uk(userId, 'pending'),
+      jsonEncode(snapshot.pendingSpots.map((e) => e.toJson()).toList()),
+    );
   }
 
   Future<void> migrateLegacyIfNeeded(String userId) async {

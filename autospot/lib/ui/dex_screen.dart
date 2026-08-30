@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../domain/catalog.dart';
+import '../domain/models.dart';
 import '../state/app_controller.dart';
 import 'widgets.dart';
 
@@ -16,6 +17,8 @@ class DexScreen extends ConsumerStatefulWidget {
 
 class _DexScreenState extends ConsumerState<DexScreen> {
   var _query = '';
+  Rarity? _rarity;
+  var _uncaught = false;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +27,10 @@ class _DexScreenState extends ConsumerState<DexScreen> {
         .map((c) => (c.catalogId ?? '${c.make}|${c.model}').toLowerCase())
         .toSet();
     final items = carCatalog.where((spec) {
+      final have = collected.contains(spec.id.toLowerCase()) ||
+          collected.contains('${spec.make}|${spec.model}'.toLowerCase());
+      if (_uncaught && have) return false;
+      if (_rarity != null && spec.rarity != _rarity) return false;
       if (_query.isEmpty) return true;
       final q = _query.toLowerCase();
       return spec.title.toLowerCase().contains(q) ||
@@ -42,6 +49,36 @@ class _DexScreenState extends ConsumerState<DexScreen> {
                 prefixIcon: Icon(Icons.search),
               ),
               onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Все'),
+                  selected: _rarity == null && !_uncaught,
+                  onSelected: (_) => setState(() {
+                    _rarity = null;
+                    _uncaught = false;
+                  }),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Не поймано'),
+                  selected: _uncaught,
+                  onSelected: (v) => setState(() => _uncaught = v),
+                ),
+                for (final r in Rarity.values) ...[
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: Text(r.ru),
+                    selected: _rarity == r,
+                    onSelected: (_) => setState(() => _rarity = r),
+                  ),
+                ],
+              ],
             ),
           ),
           Padding(

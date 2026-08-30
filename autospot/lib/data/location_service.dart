@@ -4,11 +4,12 @@ import 'package:geolocator/geolocator.dart';
 import '../core/city.dart';
 
 class GeoFix {
-  const GeoFix({required this.city, this.lat, this.lng});
+  const GeoFix({required this.city, this.lat, this.lng, this.district = ''});
 
   final String city;
   final double? lat;
   final double? lng;
+  final String district;
 }
 
 class LocationService {
@@ -39,13 +40,24 @@ class LocationService {
             (e) => e.trim().isNotEmpty,
             orElse: () => '',
           );
+      final district = [
+        mark?.subLocality,
+        mark?.thoroughfare,
+        mark?.subThoroughfare,
+      ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty).join(', ');
       if (city.isEmpty) {
-        return GeoFix(city: '', lat: pos.latitude, lng: pos.longitude);
+        return GeoFix(
+          city: '',
+          lat: pos.latitude,
+          lng: pos.longitude,
+          district: district,
+        );
       }
       return GeoFix(
         city: cityLabel(city),
         lat: pos.latitude,
         lng: pos.longitude,
+        district: district,
       );
     } catch (_) {
       return null;
