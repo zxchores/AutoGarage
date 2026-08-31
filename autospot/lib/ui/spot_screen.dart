@@ -11,7 +11,6 @@ import '../data/app_permissions.dart';
 import '../data/location_service.dart';
 import '../domain/game_logic.dart';
 import '../state/app_controller.dart';
-import 'widgets.dart';
 
 class SpotPayload {
   const SpotPayload({required this.spot, required this.geo});
@@ -172,50 +171,60 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: GlassCard(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        huntDone ? Icons.check_circle : Icons.flag,
-                        color: huntDone ? Colors.greenAccent : AppColors.orange,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(hunt.title,
-                                style: const TextStyle(fontWeight: FontWeight.w800)),
-                            Text(
-                              huntDone ? 'Уже выполнена сегодня' : hunt.description,
-                              style: const TextStyle(
-                                color: AppColors.mute,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.42),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          huntDone ? Icons.check_circle_outline : Icons.flag_outlined,
+                          size: 16,
+                          color: huntDone ? Colors.greenAccent : AppColors.orange,
                         ),
-                      ),
-                      Text('+${hunt.bonusXp}',
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            huntDone ? 'Охота выполнена' : hunt.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '+${hunt.bonusXp}',
                           style: const TextStyle(
                             color: AppColors.orange,
-                            fontWeight: FontWeight.w800,
-                          )),
-                    ],
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const Spacer(),
               if (_busy)
                 const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text('Считываю марку и модель…',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Определяю машину…',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                 ),
               Padding(
-                padding: const EdgeInsets.only(bottom: 28),
+                padding: const EdgeInsets.only(bottom: 18),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -223,19 +232,18 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
                     GestureDetector(
                       onTap: _busy || !ready ? null : _shutter,
                       child: Container(
-                        width: 78,
-                        height: 78,
+                        width: 64,
+                        height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.orange, width: 4),
-                          color: AppColors.orange.withValues(alpha: 0.2),
+                          border: Border.all(color: Colors.white, width: 2.4),
                         ),
                         child: Center(
                           child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: const BoxDecoration(
-                              color: AppColors.orange,
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: _busy ? AppColors.mute : Colors.white,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -247,9 +255,9 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.only(bottom: 8),
                 child: Text(
-                  'Наведи на машину — модель определится сама',
+                  'Любой ракурс — машину целиком',
                   style: TextStyle(color: AppColors.mute, fontSize: 12),
                 ),
               ),
@@ -264,9 +272,9 @@ class _SpotScreenState extends ConsumerState<SpotScreen>
     return InkWell(
       onTap: onTap,
       child: CircleAvatar(
-        radius: 24,
-        backgroundColor: AppColors.card.withValues(alpha: 0.85),
-        child: Icon(icon, color: AppColors.text),
+        radius: 20,
+        backgroundColor: Colors.black.withValues(alpha: 0.4),
+        child: Icon(icon, color: AppColors.text, size: 20),
       ),
     );
   }
@@ -276,26 +284,28 @@ class _ViewfinderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFFF6A00)
+      ..color = Colors.white.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    const inset = 36.0;
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final insetX = size.width * 0.06;
+    final insetY = size.height * 0.08;
     final rect = Rect.fromLTWH(
-      inset,
-      size.height * 0.22,
-      size.width - inset * 2,
-      size.height * 0.42,
+      insetX,
+      insetY,
+      size.width - insetX * 2,
+      size.height - insetY * 2,
     );
-    final r = RRect.fromRectAndRadius(rect, const Radius.circular(18));
-    canvas.drawRRect(r, paint);
-    final dim = Paint()..color = Colors.black.withValues(alpha: 0.35);
-    canvas.drawPath(
-      Path()
-        ..addRect(Offset.zero & size)
-        ..addRRect(r)
-        ..fillType = PathFillType.evenOdd,
-      dim,
-    );
+    const arm = 22.0;
+    void corner(Offset a, Offset b, Offset c) {
+      canvas.drawLine(a, b, paint);
+      canvas.drawLine(a, c, paint);
+    }
+
+    corner(rect.topLeft, rect.topLeft + const Offset(arm, 0), rect.topLeft + const Offset(0, arm));
+    corner(rect.topRight, rect.topRight + const Offset(-arm, 0), rect.topRight + const Offset(0, arm));
+    corner(rect.bottomLeft, rect.bottomLeft + const Offset(arm, 0), rect.bottomLeft + const Offset(0, -arm));
+    corner(rect.bottomRight, rect.bottomRight + const Offset(-arm, 0), rect.bottomRight + const Offset(0, -arm));
   }
 
   @override

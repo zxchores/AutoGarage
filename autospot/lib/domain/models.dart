@@ -434,6 +434,7 @@ class VisionExtraction {
     required this.tuning,
     required this.photoQuality,
     this.notes = '',
+    this.view = 'unknown',
   });
 
   final bool isCar;
@@ -449,6 +450,9 @@ class VisionExtraction {
   final TuningFlags tuning;
   final PhotoQuality photoQuality;
   final String notes;
+
+  /// front | rear | left | right | three_quarter | top | unknown
+  final String view;
 }
 
 class XpBreakdown {

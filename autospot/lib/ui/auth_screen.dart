@@ -71,7 +71,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               const SizedBox(height: 8),
               Text(
                 _mode == 0
-                    ? 'Регистрация с паролем и 2FA. Камера сама найдёт машину.'
+                    ? 'Регистрация с паролем и 2FA. Снимай машину с любого ракурса.'
                     : _mode == 1
                         ? 'Войди логином, паролем и кодом из приложения-аутентификатора.'
                         : 'Отсканируй QR в Google Authenticator, Authy или другом TOTP.',
@@ -154,7 +154,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget _registerForm() {
     return ListView(
       children: [
-        const Text('Регистрация', style: TextStyle(fontWeight: FontWeight.w800)),
+        const Text('Регистрация', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
         TextField(
           controller: _login,

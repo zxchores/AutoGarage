@@ -25,7 +25,7 @@ class ProfileScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
-          Text('ПРОФИЛЬ', style: Theme.of(context).textTheme.headlineMedium),
+          Text('Профиль', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 16),
           GlassCard(
             child: Column(
@@ -62,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
                 LinearProgressIndicator(
                   value: level.progress(profile.xp),
-                  minHeight: 8,
+                  minHeight: 6,
                   borderRadius: BorderRadius.circular(8),
                   color: AppColors.orange,
                   backgroundColor: AppColors.line,
@@ -77,56 +77,31 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          GlassCard(
-            onTap: () => context.push('/dex'),
-            child: const Row(
-              children: [
-                Expanded(
-                  child: Text('База машин',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-                Icon(Icons.chevron_right, color: AppColors.mute),
-              ],
-            ),
-          ),
           const SizedBox(height: 8),
           GlassCard(
-            onTap: () => context.push('/collections'),
-            child: const Row(
+            padding: EdgeInsets.zero,
+            child: Column(
               children: [
-                Expanded(
-                  child: Text('Серии-коллекции',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                _ProfileLink(
+                  label: 'База машин',
+                  onTap: () => context.push('/dex'),
                 ),
-                Icon(Icons.chevron_right, color: AppColors.mute),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          GlassCard(
-            onTap: () => context.push('/achievements'),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('Достижения',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                const Divider(height: 1, color: AppColors.line),
+                _ProfileLink(
+                  label: 'Серии-коллекции',
+                  onTap: () => context.push('/collections'),
                 ),
-                Text('${unlocked.length}/${achievements.length}'),
-                const Icon(Icons.chevron_right, color: AppColors.mute),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          GlassCard(
-            onTap: () => context.push('/settings'),
-            child: const Row(
-              children: [
-                Expanded(
-                  child: Text('Настройки',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                const Divider(height: 1, color: AppColors.line),
+                _ProfileLink(
+                  label: 'Достижения',
+                  trailing: '${unlocked.length}/${achievements.length}',
+                  onTap: () => context.push('/achievements'),
                 ),
-                Icon(Icons.chevron_right, color: AppColors.mute),
+                const Divider(height: 1, color: AppColors.line),
+                _ProfileLink(
+                  label: 'Настройки',
+                  onTap: () => context.push('/settings'),
+                ),
               ],
             ),
           ),
@@ -135,3 +110,33 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
+
+class _ProfileLink extends StatelessWidget {
+  const _ProfileLink({
+    required this.label,
+    required this.onTap,
+    this.trailing,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      onTap: onTap,
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (trailing != null)
+            Text(trailing!, style: const TextStyle(color: AppColors.mute)),
+          const Icon(Icons.chevron_right, color: AppColors.mute),
+        ],
+      ),
+    );
+  }
+}
+

@@ -414,6 +414,7 @@ IdentifiedSpot applyCatalogPick({
     tuning: current.extraction.tuning,
     photoQuality: current.extraction.photoQuality,
     notes: current.extraction.notes,
+    view: current.extraction.view,
   );
   return buildIdentifiedSpot(
     extraction: extraction,

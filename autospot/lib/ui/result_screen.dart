@@ -26,7 +26,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
   var _busy = false;
   late final AnimationController _scan;
   late final AnimationController _reveal;
-  String _scanLine = 'Ищу кузов…';
+    String _scanLine = 'Смотрю силуэт…';
 
   @override
   void initState() {
@@ -44,7 +44,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
   }
 
   Future<void> _runScan() async {
-    const lines = ['Ищу кузов…', 'Читаю шильдик…', 'Сверяю с базой…'];
+    const lines = ['Смотрю силуэт…', 'Читаю фары и стойки…', 'Сверяю с базой…'];
     for (var i = 0; i < lines.length; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 380));
       if (!mounted) return;

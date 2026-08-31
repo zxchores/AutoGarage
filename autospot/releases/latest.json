@@ -1,7 +1,7 @@
 {
-  "version": "1.4.1",
-  "build": 9,
-  "apk": "https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.1-android-arm64.apk",
+  "version": "1.4.2",
+  "build": 10,
+  "apk": "https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.2-android-arm64.apk",
   "ipa": "https://github.com/zxchores/AutoGarage/raw/main/autospot/releases/AutoSpot-1.4.0-ios.ipa",
-  "notes": "База на 1316 актуальных серийных машин мира"
+  "notes": "Распознавание с любого ракурса и более спокойный интерфейс"
 }

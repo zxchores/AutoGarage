@@ -10,7 +10,15 @@ import '../domain/catalog.dart';
 import '../domain/game_logic.dart';
 
 const visionPrompt = '''
-Identify the main production car in THIS photo. Look at grille, headlights, tail lights, badge, proportions.
+Identify the main production car from ANY viewpoint: front, rear, left side, right side, 3/4 diagonal, overhead/top, or mixed. Same car from 360 degrees — do not assume a rear shot.
+
+Use whatever is visible:
+- front: grille, headlights, DRL, front badge, bumper
+- rear: tail-lamp clusters, rear badge (never read license plates)
+- left or right profile: DLO/greenhouse, beltline, C/D-pillar, door count, wheelbase, roofline, fenders, wheels
+- 3/4 diagonal: silhouette plus lights
+- overhead/top: roof rails, sunroof, greenhouse outline
+
 Ignore people, shops, interiors, plates. Never copy a license plate.
 
 Reply with ONE line, then JSON.
@@ -18,7 +26,9 @@ Line: MAKE|MODEL|GEN|COLOR
 Example form only: Toyota|RAV4|XA50|white
 
 JSON:
-{"is_car":true,"make":"","model":"","generation":"","year_from":0,"year_to":0,"body_type":"","color":"","confidence":"low|medium|high","condition":"good","tuning":{"bodykit":false,"wheels":false,"spoiler":false,"vinyl":false,"exhaust":false,"lowered":false,"details":[]},"photo_quality":"average","notes":""}
+{"is_car":true,"make":"","model":"","generation":"","year_from":0,"year_to":0,"body_type":"","color":"","view":"front","confidence":"low|medium|high","condition":"good","tuning":{"bodykit":false,"wheels":false,"spoiler":false,"vinyl":false,"exhaust":false,"lowered":false,"details":[]},"photo_quality":"average","notes":""}
+
+view is one of: front, rear, left, right, three_quarter, top.
 
 Rules:
 - Official English names. Model is the nameplate, never SUV/sedan/crossover.
@@ -88,7 +98,7 @@ PhotoAnalysis _analyzeDecoded(img.Image decoded) {
     final rr = r / n, gg = g / n, bb = b / n;
     color = _guessColor(rr, gg, bb);
   }
-  hints.add('Снимай машину целиком, не обрезай колёса.');
+  hints.add('Снимай с любого ракурса — спереди, сбоку, сзади, наискосок или сверху. Машину целиком.');
   return PhotoAnalysis(quality: quality, hints: hints, color: color);
 }
 
@@ -147,15 +157,18 @@ bool _looksLikeVehicleDecoded(img.Image decoded) {
   final mean = sum / n;
   final variance = (sumSq / n) - mean * mean;
   final stddev = variance <= 0 ? 0.0 : math.sqrt(variance);
-  if (stddev < 12) return false;
-  if (sky / n > 0.62 && stddev < 28) return false;
-  return midContrast > 6 || stddev > 22;
+  // Side and overhead shots are flatter than grille/tail close-ups.
+  if (stddev < 8) return false;
+  if (sky / n > 0.75 && stddev < 22) return false;
+  return midContrast > 3 || stddev > 16;
 }
 
 const _spacePrompt = '''
-What production car is in this photo? Answer from THIS image only.
+Identify this production car from ANY angle: front, rear, left, right, 3/4, diagonal, or top. Same car from 360 degrees — do not assume rear.
+Use silhouette, DLO, pillars, lights, badge. Never read license plates.
 First line: MAKE|MODEL|GEN|COLOR
-Then JSON: {"is_car":true,"make":"","model":"","generation":"","body_type":"","color":"","confidence":"medium"}
+Then JSON: {"is_car":true,"make":"","model":"","generation":"","body_type":"","color":"","view":"front","confidence":"medium"}
+view is front, rear, left, right, three_quarter, or top.
 Model is a nameplate, not SUV/sedan. Keep M3/GTI/RS/AMG/Type R if the badge is visible.
 No car: NO_CAR
 ''';
@@ -181,23 +194,27 @@ Uint8List compressForVision(Uint8List bytes) {
 }
 
 img.Image focusCar(img.Image src) {
-  if (src.width < 720 || src.height < 540) return src;
-  final x = (src.width * 0.03).round();
-  final y = (src.height * 0.06).round();
-  final w = (src.width * 0.94).round();
-  final h = (src.height * 0.88).round();
-  if (w < 320 || h < 240) return src;
-  return img.copyCrop(src, x: x, y: y, width: w, height: h);
+  var work = src;
+  try {
+    work = img.bakeOrientation(work);
+  } catch (_) {}
+  if (work.width < 80 || work.height < 80) return work;
+  final x = (work.width * 0.01).round().clamp(0, 12);
+  final y = (work.height * 0.01).round().clamp(0, 12);
+  final w = work.width - x * 2;
+  final h = work.height - y * 2;
+  if (w < 40 || h < 40) return work;
+  return img.copyCrop(work, x: x, y: y, width: w, height: h);
 }
 
 Uint8List _jpegForVision(img.Image decoded) {
   var work = decoded;
-  if (work.width > 1024) {
-    work = img.copyResize(work, width: 1024);
-  } else if (work.height > 1280) {
-    work = img.copyResize(work, height: 1280);
+  if (work.width > 1280) {
+    work = img.copyResize(work, width: 1280);
+  } else if (work.height > 1600) {
+    work = img.copyResize(work, height: 1600);
   }
-  return Uint8List.fromList(img.encodeJpg(work, quality: 82));
+  return Uint8List.fromList(img.encodeJpg(work, quality: 86));
 }
 
 bool isFlatFrame(Uint8List bytes) {
@@ -224,7 +241,7 @@ bool _isFlatDecoded(img.Image decoded) {
   final mean = sum / n;
   final variance = (sumSq / n) - mean * mean;
   final stddev = variance <= 0 ? 0.0 : math.sqrt(variance);
-  return stddev < 11;
+  return stddev < 8;
 }
 
 class VisionService {
@@ -326,6 +343,7 @@ class VisionService {
             tuning: extraction.tuning,
             photoQuality: extraction.photoQuality,
             notes: extraction.notes,
+            view: extraction.view,
           )
         : extraction;
     final spec = matchCatalog(
@@ -563,6 +581,7 @@ VisionExtraction parseVisionReply(String raw) {
         tuning: const TuningFlags(),
         photoQuality: PhotoQuality.average,
         notes: cleaned,
+        view: 'unknown',
       );
     }
   }
@@ -596,6 +615,7 @@ VisionExtraction parseVisionReply(String raw) {
         tuning: const TuningFlags(),
         photoQuality: PhotoQuality.average,
         notes: cleaned,
+        view: 'unknown',
       );
     }
   }
@@ -629,7 +649,20 @@ VisionExtraction parseVisionJson(String raw) {
     photoQuality:
         _enum(PhotoQuality.values, json['photo_quality'], PhotoQuality.average),
     notes: '${json['notes'] ?? ''}',
+    view: normalizeCarView('${json['view'] ?? json['angle'] ?? ''}'),
   );
+}
+
+String normalizeCarView(String raw) {
+  final v = raw.trim().toLowerCase().replaceAll(RegExp(r'[\s\-]+'), '_');
+  return switch (v) {
+    'front' || 'rear' || 'left' || 'right' || 'top' => v,
+    'back' => 'rear',
+    'side' || 'profile' => 'left',
+    'three_quarter' || 'threequarter' || 'diagonal' || '34' => 'three_quarter',
+    'overhead' || 'above' || 'drone' => 'top',
+    _ => 'unknown',
+  };
 }
 
 int _asInt(dynamic value, int fallback) {

@@ -53,7 +53,7 @@ class _GarageScreenState extends ConsumerState<GarageScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text('ГАРАЖ',
+                        child: Text('Гараж',
                             style: Theme.of(context).textTheme.headlineMedium),
                       ),
                       IconButton(
@@ -222,7 +222,7 @@ class _GarageScreenState extends ConsumerState<GarageScreen> {
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(22),
+                                top: Radius.circular(12),
                               ),
                               child: SpotPhoto(
                                 photoId: car.photoId,

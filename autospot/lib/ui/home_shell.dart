@@ -12,61 +12,34 @@ class HomeShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Container(
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: Row(
-            children: [
-              _tab(Icons.grid_view_rounded, 'Гараж', 0),
-              _tab(Icons.camera_alt_rounded, 'Спот', 1, spotlight: true),
-              _tab(Icons.emoji_events_rounded, 'Город', 2),
-              _tab(Icons.person_rounded, 'Профиль', 3),
-            ],
-          ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.line, width: 0.5)),
         ),
-      ),
-    );
-  }
-
-  Widget _tab(IconData icon, String label, int index, {bool spotlight = false}) {
-    final selected = navigationShell.currentIndex == index;
-    final color = selected ? AppColors.orange : AppColors.mute;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(28),
-        onTap: () => navigationShell.goBranch(index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.all(spotlight ? 8 : 4),
-              decoration: BoxDecoration(
-                color: spotlight
-                    ? AppColors.orange.withValues(alpha: selected ? 1 : 0.75)
-                    : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: spotlight ? Colors.black : color,
-                size: spotlight ? 22 : 22,
-              ),
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: navigationShell.goBranch,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: 'Гараж',
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: spotlight ? AppColors.orange : color,
-              ),
+            NavigationDestination(
+              icon: Icon(Icons.camera_alt_outlined),
+              selectedIcon: Icon(Icons.camera_alt_rounded),
+              label: 'Спот',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.emoji_events_outlined),
+              selectedIcon: Icon(Icons.emoji_events_rounded),
+              label: 'Город',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Профиль',
             ),
           ],
         ),

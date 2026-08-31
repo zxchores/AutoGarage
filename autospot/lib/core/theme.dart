@@ -50,18 +50,18 @@ ThemeData buildTheme({bool light = false, bool large = false}) {
   );
   return base.copyWith(
     textTheme: textTheme.copyWith(
-      headlineLarge: GoogleFonts.orbitron(
+      headlineLarge: GoogleFonts.dmSans(
         fontSize: 32 * scale,
         fontWeight: FontWeight.w700,
         color: text,
-        letterSpacing: 1.2,
+        letterSpacing: 1.6,
       ),
-      headlineMedium: GoogleFonts.orbitron(
+      headlineMedium: GoogleFonts.dmSans(
         fontSize: 22 * scale,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
         color: text,
       ),
-      titleLarge: GoogleFonts.orbitron(
+      titleLarge: GoogleFonts.dmSans(
         fontSize: 18 * scale,
         fontWeight: FontWeight.w600,
         color: text,
@@ -70,24 +70,47 @@ ThemeData buildTheme({bool light = false, bool large = false}) {
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: false,
       foregroundColor: text,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.line),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.line, width: 0.6),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.line),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.line, width: 0.6),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.orange, width: 1.4),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.orange, width: 1),
       ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 60,
+      elevation: 0,
+      backgroundColor: bg,
+      indicatorColor: AppColors.orange.withValues(alpha: 0.14),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(
+          size: 22,
+          color: selected ? AppColors.orange : AppColors.mute,
+        );
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 11,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          color: selected ? AppColors.orange : AppColors.mute,
+        );
+      }),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.card,

@@ -53,7 +53,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Text('ГОРОД', style: Theme.of(context).textTheme.headlineMedium),
+            Text('Город', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 6),
             Text(
               city.isEmpty ? 'Укажи город в профиле' : city,
@@ -100,15 +100,15 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: GlassCard(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   child: Row(
                     children: [
                       Text(
                         '${index + 1}',
                         style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 22,
-                          color: mine ? AppColors.orange : AppColors.text,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: mine ? AppColors.orange : AppColors.mute,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -164,14 +164,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                 child: Row(
                   children: [
-                    const Text(
-                      '1',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        color: AppColors.orange,
-                      ),
+                  const Text(
+                    '1',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppColors.orange,
                     ),
+                  ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(

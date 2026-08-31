@@ -377,6 +377,39 @@ data: ["{\\"is_car\\":true,\\"make\\":\\"BMW\\",\\"model\\":\\"3 Series\\"}"]
     expect(parsed.model.toLowerCase(), contains('3'));
   });
 
+  test('vision prompt covers every car viewpoint', () {
+    expect(visionPrompt.toLowerCase(), contains('360'));
+    expect(visionPrompt.toLowerCase(), contains('front'));
+    expect(visionPrompt.toLowerCase(), contains('left'));
+    expect(visionPrompt.toLowerCase(), contains('right'));
+    expect(visionPrompt.toLowerCase(), contains('overhead'));
+    expect(visionPrompt.toLowerCase(), contains('do not assume a rear'));
+  });
+
+  test('vision json keeps viewpoint from any angle', () {
+    const raw = '''
+    {"is_car": true, "make": "Toyota", "model": "Camry", "generation": "XV70",
+     "year_from": 2018, "year_to": 2024, "body_type": "sedan", "color": "white",
+     "view": "diagonal", "confidence": "high", "condition": "good",
+     "tuning": {}, "photo_quality": "good"}
+    ''';
+    final parsed = parseVisionJson(raw);
+    expect(parsed.make, 'Toyota');
+    expect(parsed.model, 'Camry');
+    expect(parsed.view, 'three_quarter');
+    expect(normalizeCarView('overhead'), 'top');
+    expect(normalizeCarView('back'), 'rear');
+    expect(normalizeCarView('left'), 'left');
+  });
+
+  test('focus crop keeps almost the full frame', () {
+    final image = img.Image(width: 800, height: 600);
+    img.fill(image, color: img.ColorRgb8(40, 40, 40));
+    final cropped = focusCar(image);
+    expect(cropped.width, greaterThanOrEqualTo(760));
+    expect(cropped.height, greaterThanOrEqualTo(560));
+  });
+
   test('city names collapse case and spelling variants', () {
     expect(cityKey('красноярск'), cityKey('Красноярск'));
     expect(cityKey('КРАСНОЯРСК'), cityKey('Krasnoyarsk'));
